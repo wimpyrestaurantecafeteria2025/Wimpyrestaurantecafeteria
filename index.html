@@ -181,17 +181,25 @@
             setDecision(tipoDecision);
             setVista('resultado');
             
-            // ✅ NUEVO MENSAJE: Se envía a Wimpy desde el cliente
+            // ✅ Mensaje para Safari - formato compatible
             const mensajeWimpy = tipoDecision === 'aceptado' 
-              ? `Yo ${clienteValidado.nombre} he recibido mi Almuerzo, muchas gracias Wimpy 🍔☕`
+              ? `Yo ${clienteValidado.nombre} he recibido mi Almuerzo, muchas gracias Wimpy`
               : `Yo ${clienteValidado.nombre} NO he recibido mi Almuerzo. Por favor contactarme.`;
             
-            // Se envía al número de Wimpy (no al cliente)
+            // Safari compatible: usar window.location.href en lugar de window.open
             const urlWhatsApp = `https://wa.me/${NUMERO_WIMPY}?text=${encodeURIComponent(mensajeWimpy)}`;
             
+            // Dar tiempo para que se vea la pantalla de confirmación
             setTimeout(() => {
-              window.open(urlWhatsApp, '_blank');
-            }, 500);
+              // Safari compatible: cambiar directamente la ubicación
+              if (/iPhone|iPad|iPod|Safari/i.test(navigator.userAgent)) {
+                // Para iOS/Safari
+                window.location.href = urlWhatsApp;
+              } else {
+                // Para otros navegadores
+                window.open(urlWhatsApp, '_blank');
+              }
+            }, 1000);
           } else {
             alert('Error al registrar. Por favor intenta nuevamente.');
           }
@@ -1034,11 +1042,11 @@
                   </p>
                 </div>
 
-                <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
-                  <p className="text-xs text-blue-800">
-                    💬 Al confirmar, se enviará un mensaje de WhatsApp a Wimpy con tu confirmación
-                  </p>
-                </div>
+                  <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
+                    <p className="text-sm text-blue-800">
+                      📲 Al confirmar, se abrirá WhatsApp automáticamente para enviar el mensaje a Wimpy
+                    </p>
+                  </div>
 
                 <div className="space-y-4">
                   <button

@@ -1,863 +1,108 @@
+
 <!DOCTYPE html>
 <html lang="es">
-<head>
+<cabeza>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wimpy - Sistema Completo</title>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍔</text></svg>">
-</head>
-<body>
-  <div id="root"></div>
-  <script type="text/babel">
-    const { useState, useEffect, useMemo } = React;
+  <meta name="viewport" content="ancho=ancho-del-dispositivo, escala-inicial=1.0">
+  Aplicación Wimpy - Pedidos
+  <estilo>
+    cuerpo { familia de fuentes: Arial, sans-serif; color de fondo: #121212; color: #e0e0e0; margen: 0; relleno: 0; }
+    encabezado { color de fondo: #1f1f1f; relleno: 15px; alineación del texto: centro; tamaño de fuente: 1.4em; color: #fff; }
+    nav { display: flex; justify-content: space-around; background-color: #1f1f1f; padding: 10px; position: sticky; top: 0; }
+    botón de navegación { color de fondo: #333; color: #fff; borde: ninguno; relleno: 8px 12px; radio del borde: 8px; cursor: puntero; }
+    botón de navegación:hover { background-color: #555; }
+    sección { relleno: 15px; }
+    .oculto { display: ninguno; }
+    .admin-btn { posición: fija; inferior: 10px; derecha: 10px; fondo: #007bff; color: blanco; relleno: 12px; borde: ninguno; radio del borde: 50%; tamaño de fuente: 1.2em; cursor: puntero; }
+    .admin-panel { color de fondo: #1f1f1f; radio del borde: 10px; relleno: 15px; margen: 15px 0; }
+    entrada, seleccionar { ancho: 100%; relleno: 8px; margen: 6px 0; radio del borde: 5px; borde: 1px sólido #555; fondo: #2b2b2b; color: #fff; }
+    tabla { ancho: 100%; colapso del borde: colapsar; margen superior: 10px; }
+    th, td { borde: 1px sólido #444; relleno: 8px; alineación del texto: izquierda; }
+    th { color de fondo: #333; }
+    .btn { color de fondo: #007bff; borde: ninguno; color: blanco; relleno: 8px 12px; radio del borde: 5px; cursor: puntero; }
+    .btn:hover { color de fondo: #0056b3; }
+  </estilo>
+</cabeza>
+<cuerpo>
+<header>ðŸ ” Aplicación Wimpy</header>
 
-    // CONFIGURACIÓN
-    const API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec';
-    const ADMIN_PASS = 'wimpy2025';
+<navegación>
+  <button onclick="mostrar('inicio')">Inicio</button>
+  <button onclick="mostrar('pedidos')">Pedidos</button>
+  <button onclick="mostrar('clientes')">Clientes</button>
+  <button onclick="mostrar('productos')">Productos</button>
+  <button onclick="mostrar('configuracion')">Configuración</button>
+  <botón onclick="mostrar('historial')">Historial</botón>
+</nav>
 
-    // DATOS GLOBALES
-    let CLIENTES = [];
-    let PRODUCTOS = [];
-    let HISTORIAL = [];
-    let PEDIDOS = [];
-    let CONFIG = { numeroWimpy: '573118336562' };
+<section id="inicio">
+  Bienvenido a Wimpy
+  <p>Administra tus pedidos, clientes y productos de forma rápida y segura.</p>
+</sección>
 
-    function App() {
-      const [modo, setModo] = useState('menu'); // menu, pedidos, entregas, admin
-      const [vista, setVista] = useState('inicio');
-      const [tel, setTel] = useState('');
-      const [cliente, setCliente] = useState(null);
-      const [loading, setLoading] = useState(false);
-      const [auth, setAuth] = useState(false);
-      const [pass, setPass] = useState('');
-      const [adminVista, setAdminVista] = useState('dashboard');
-      const [config, setConfig] = useState(CONFIG);
-      const [editandoConfig, setEditandoConfig] = useState(false);
-      
-      // Pedidos
-      const [carrito, setCarrito] = useState([]);
-      const [otp, setOtp] = useState('');
-      const [otpGen, setOtpGen] = useState('');
-      
-      // Productos
-      const [nuevoP, setNuevoP] = useState({ nombre: '', precio: '', categoria: '' });
-      const [editP, setEditP] = useState(null);
-      const [nuevaCategoria, setNuevaCategoria] = useState('');
-      const [mostrarNuevaCategoria, setMostrarNuevaCategoria] = useState(false);
-      
-      // Clientes
-      const [nuevoC, setNuevoC] = useState({ telefono: '', nombre: '', email: '' });
-      const [editC, setEditC] = useState(null);
-      
-      // Entregas
-      const [decision, setDecision] = useState(null);
+<sección id="pedidos" class="oculto">
+  Pedidos
+  <p>Los clientes pueden enviar sus pedidos por WhatsApp.</p>
+  <button class="btn" onclick="enviarWhatsApp()">Enviar pedido</button>
+</sección>
 
-      useEffect(() => {
-        if (auth) cargarDatos();
-        cargarConfig();
-      }, [auth]);
+<sección id="clientes" class="oculto">
+  Clientes
+  <div id="listaClientes">Cargando...</div>
+</sección>
 
-      const cargarDatos = async () => {
-        try {
-          const [c, p, h, pd] = await Promise.all([
-            fetch(`${API}?action=obtenerClientes`).then(r => r.json()),
-            fetch(`${API}?action=obtenerProductos`).then(r => r.json()),
-            fetch(`${API}?action=obtenerHistorial`).then(r => r.json()),
-            fetch(`${API}?action=obtenerPedidos`).then(r => r.json())
-          ]);
-          if (c.success) CLIENTES = c.clientes;
-          if (p.success) PRODUCTOS = p.productos;
-          if (h.success) HISTORIAL = h.historial;
-          if (pd.success) PEDIDOS = pd.pedidos;
-        } catch (e) {
-          console.error(e);
-        }
-      };
+<sección id="productos" class="oculto">
+  Productos
+  <div id="listaProductos">Cargando...</div>
+</sección>
 
-      const cargarConfig = async () => {
-        try {
-          const res = await fetch(`${API}?action=obtenerConfiguracion`);
-          const data = await res.json();
-          if (data.success) {
-            CONFIG = data.configuracion;
-            setConfig(data.configuracion);
-          }
-        } catch (e) {}
-      };
+<sección id="configuracion" class="oculto">
+  <h2>Configuración</h2>
+  <label>Número de WhatsApp:</label>
+  <input type="text" id="numeroWimpy" value="573118336562" />
+  <button class="btn" onclick="guardarConfiguracion()">Guardar</button>
+</sección>
 
-      const limpiarTel = (t) => {
-        let l = t.replace(/\s+/g, '').replace(/-/g, '');
-        if (!l.startsWith('+')) l = l.startsWith('57') ? '+' + l : '+57' + l;
-        return l;
-      };
+<section id="historial" class="oculto">
+  <h2>Historial de pedidos</h2>
+  <div id="tablaHistorial">Cargando...</div>
+</sección>
 
-      const genOTP = () => Math.floor(1000 + Math.random() * 9000).toString();
+<button class="admin-btn" onclick="accederAdmin()">ðŸ”'</button>
 
-      const abrirWA = (num, msg) => {
-        const url = `https://wa.me/${num.replace('+', '')}?text=${encodeURIComponent(msg)}`;
-        if (/iPhone|iPad|iPod|Safari/i.test(navigator.userAgent)) {
-          window.location.href = url;
-        } else {
-          window.open(url, '_blank');
-        }
-      };
+<guión>
+constante GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec';
+deje que adminAcceso = false;
 
-      // MENU PRINCIPAL
-      if (modo === 'menu') {
-        return (
-          <div className="min-h-screen bg-gradient-to-br from-amber-50 to-red-50 flex items-center justify-center p-4">
-            <div className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl p-8">
-              <div className="text-center mb-8">
-                <div className="text-6xl mb-4">☕</div>
-                <h1 className="text-4xl font-bold text-gray-800 mb-2">Wimpy</h1>
-                <p className="text-orange-600 font-semibold text-lg">Restaurante y Cafetería</p>
-              </div>
-              <div className="space-y-4">
-                <button onClick={() => { setModo('pedidos'); setVista('inicio'); }} className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-6 rounded-xl font-bold text-xl hover:scale-105 transition shadow-lg">
-                  <span className="text-3xl">🛒</span> Hacer un Pedido
-                </button>
-                <button onClick={() => { setModo('entregas'); setVista('inicio'); }} className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-6 rounded-xl font-bold text-xl hover:scale-105 transition shadow-lg">
-                  <span className="text-3xl">📦</span> Confirmar Entrega
-                </button>
-                <button onClick={() => setModo('admin')} className="w-full bg-gradient-to-r from-gray-600 to-gray-700 text-white py-4 rounded-xl font-bold hover:scale-105 transition shadow-lg">
-                  <span className="text-2xl">🔒</span> Panel Administrador
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      }
+función mostrar(sección) {
+  document.querySelectorAll('sección').forEach(s => s.classList.add('oculto'));
+  document.getElementById(seccion).classList.remove('oculto');
+}
 
-      // PEDIDOS
-      if (modo === 'pedidos') {
-        if (vista === 'inicio') {
-          return (
-            <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-50 flex items-center justify-center p-4">
-              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
-                <div className="text-center mb-8">
-                  <div className="text-5xl mb-4">🛒</div>
-                  <h1 className="text-3xl font-bold mb-2">Hacer Pedido</h1>
-                  <p className="text-green-600">Wimpy Restaurante</p>
-                </div>
-                <input type="tel" value={tel} onChange={(e) => setTel(e.target.value)} placeholder="3118336562" className="w-full px-4 py-4 border-2 rounded-xl mb-4" disabled={loading} />
-                <button onClick={async () => {
-                  if (!tel) return alert('Ingresa tu teléfono');
-                  setLoading(true);
-                  try {
-                    const tl = limpiarTel(tel);
-                    const res = await fetch(`${API}?action=validarCliente&telefono=${encodeURIComponent(tl)}`);
-                    const data = await res.json();
-                    if (data.success) {
-                      setCliente(data.cliente);
-                      setVista('catalogo');
-                    } else {
-                      alert('Número no registrado');
-                    }
-                  } catch (e) {
-                    alert('Error de conexión');
-                  }
-                  setLoading(false);
-                }} disabled={!tel || loading} className="w-full bg-green-500 text-white py-4 rounded-xl font-bold mb-2 disabled:opacity-50">
-                  {loading ? '⏳ Validando...' : '🍔 Ver Menú'}
-                </button>
-                <button onClick={() => { setModo('menu'); setTel(''); }} className="w-full text-gray-600">← Volver</button>
-              </div>
-            </div>
-          );
-        }
+función accederAdmin() {
+  const pin = Prompt("Ingrese el PIN de administrador:");
+  si (pin === "1995") {
+    adminAcceso = true;
+    alert("Acceso concedido âœ...");
+  } demás {
+    alert("PIN incorrecto â Œ");
+  }
+}
 
-        if (vista === 'catalogo') {
-          const productosActivos = PRODUCTOS.filter(p => p.activo);
-          const categorias = [...new Set(productosActivos.map(p => p.categoria))];
-          
-          return (
-            <div className="min-h-screen bg-gray-50 p-4">
-              <div className="max-w-4xl mx-auto">
-                <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
-                  <h2 className="text-2xl font-bold mb-2">Hola {cliente.nombre}! 👋</h2>
-                  <p className="text-gray-600">Selecciona tus productos</p>
-                </div>
+función asíncrona guardarConfiguracion() {
+  if (!adminAcceso) return alert("Acceso restringido");
+  const numero = document.getElementById("numeroWimpy").value.trim();
+  esperar fetch(`${GOOGLE_SHEETS_API}?action=guardarConfiguracion&numero=${numero}`);
+  alert("Configuración guardada");
+}
 
-                {categorias.map(cat => (
-                  <div key={cat} className="mb-6">
-                    <h3 className="text-xl font-bold text-gray-800 mb-3">{cat}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {productosActivos.filter(p => p.categoria === cat).map(p => (
-                        <div key={p.id} className="bg-white rounded-xl shadow p-4 hover:shadow-lg transition">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-bold text-lg">{p.nombre}</h4>
-                            <span className="text-xl font-bold text-green-600">${p.precio.toLocaleString()}</span>
-                          </div>
-                          <button onClick={() => {
-                            const existe = carrito.find(i => i.id === p.id);
-                            if (existe) {
-                              setCarrito(carrito.map(i => i.id === p.id ? {...i, cantidad: i.cantidad + 1} : i));
-                            } else {
-                              setCarrito([...carrito, {...p, cantidad: 1}]);
-                            }
-                          }} className="w-full bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600">
-                            + Agregar
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+función enviarWhatsApp() {
+  const numero = document.getElementById("numeroWimpy").value.trim();
+  const mensaje = encodeURIComponent("Hola, quiero hacer un pedido en Wimpy ðŸ ”");
+  ventana.open(`https://wa.me/${numero}?text=${mensaje}`, "_blank");
+}
 
-                {carrito.length > 0 && (
-                  <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4">
-                    <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm text-gray-600">{carrito.reduce((s, i) => s + i.cantidad, 0)} productos</p>
-                        <p className="text-2xl font-bold text-green-600">${carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0).toLocaleString()}</p>
-                      </div>
-                      <button onClick={() => setVista('carrito')} className="bg-green-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-600">
-                        Ver Carrito →
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <button onClick={() => { setVista('inicio'); setCarrito([]); setCliente(null); }} className="mt-4 text-gray-600">← Volver</button>
-              </div>
-            </div>
-          );
-        }
-
-        if (vista === 'carrito') {
-          const total = carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0);
-          
-          return (
-            <div className="min-h-screen bg-gray-50 p-4">
-              <div className="max-w-2xl mx-auto">
-                <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
-                  <h2 className="text-2xl font-bold mb-4">Tu Carrito 🛒</h2>
-                  <div className="space-y-3">
-                    {carrito.map(item => (
-                      <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-semibold">{item.nombre}</p>
-                          <p className="text-sm text-gray-600">${item.precio.toLocaleString()} c/u</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button onClick={() => {
-                            if (item.cantidad > 1) {
-                              setCarrito(carrito.map(i => i.id === item.id ? {...i, cantidad: i.cantidad - 1} : i));
-                            } else {
-                              setCarrito(carrito.filter(i => i.id !== item.id));
-                            }
-                          }} className="w-8 h-8 bg-red-500 text-white rounded-full font-bold">-</button>
-                          <span className="font-bold text-lg w-8 text-center">{item.cantidad}</span>
-                          <button onClick={() => {
-                            setCarrito(carrito.map(i => i.id === item.id ? {...i, cantidad: i.cantidad + 1} : i));
-                          }} className="w-8 h-8 bg-green-500 text-white rounded-full font-bold">+</button>
-                          <span className="font-bold text-lg w-24 text-right">${(item.precio * item.cantidad).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="border-t mt-4 pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xl font-bold">TOTAL:</span>
-                      <span className="text-3xl font-bold text-green-600">${total.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <button onClick={() => {
-                  if (carrito.length === 0) return alert('Carrito vacío');
-                  const codigo = genOTP();
-                  setOtpGen(codigo);
-                  const msg = `🔐 Código de verificación Wimpy: ${codigo}\n\nUsa este código para confirmar tu pedido.`;
-                  abrirWA(cliente.telefono, msg);
-                  setVista('verificacion');
-                }} className="w-full bg-green-500 text-white py-4 rounded-xl font-bold text-lg mb-2">
-                  Confirmar Pedido →
-                </button>
-                <button onClick={() => setVista('catalogo')} className="w-full text-gray-600">← Seguir comprando</button>
-              </div>
-            </div>
-          );
-        }
-
-        if (vista === 'verificacion') {
-          return (
-            <div className="min-h-screen bg-blue-50 flex items-center justify-center p-4">
-              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
-                <div className="text-center mb-6">
-                  <div className="text-5xl mb-4">🔐</div>
-                  <h2 className="text-2xl font-bold mb-2">Verificación</h2>
-                  <p className="text-gray-600">Ingresa el código enviado a tu WhatsApp</p>
-                </div>
-                <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="1234" maxLength="4" className="w-full px-4 py-4 border-2 rounded-xl mb-4 text-center text-2xl font-bold" />
-                <button onClick={async () => {
-                  if (otp !== otpGen) return alert('❌ Código incorrecto');
-                  
-                  const detalle = carrito.map(i => `• ${i.cantidad}x ${i.nombre} - $${(i.precio * i.cantidad).toLocaleString()}`).join('\n');
-                  const total = carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0);
-                  const msgPedido = `🍔 *NUEVO PEDIDO - WIMPY*\n\n👤 Cliente: ${cliente.nombre}\n📱 Teléfono: ${cliente.telefono}\n\n📦 PEDIDO:\n${detalle}\n\n💰 TOTAL: $${total.toLocaleString()}`;
-                  
-                  // Registrar en Sheets
-                  try {
-                    const productosJSON = JSON.stringify(carrito);
-                    await fetch(`${API}?action=registrarPedido&clienteId=${cliente.id}&telefono=${encodeURIComponent(cliente.telefono)}&nombre=${encodeURIComponent(cliente.nombre)}&productos=${encodeURIComponent(productosJSON)}&total=${total}`);
-                  } catch (e) {}
-                  
-                  abrirWA(config.numeroWimpy, msgPedido);
-                  setVista('confirmado');
-                }} className="w-full bg-green-500 text-white py-4 rounded-xl font-bold mb-2">
-                  ✓ Verificar y Enviar
-                </button>
-                <button onClick={() => setVista('carrito')} className="w-full text-gray-600">← Volver</button>
-              </div>
-            </div>
-          );
-        }
-
-        if (vista === 'confirmado') {
-          return (
-            <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
-              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center">
-                <div className="text-6xl mb-4 animate-bounce">✅</div>
-                <h2 className="text-3xl font-bold mb-2">¡Pedido Confirmado!</h2>
-                <p className="text-gray-600 mb-6">Tu pedido ha sido enviado a Wimpy exitosamente</p>
-                <button onClick={() => { setModo('menu'); setVista('inicio'); setTel(''); setCliente(null); setCarrito([]); setOtp(''); }} className="w-full bg-green-500 text-white py-4 rounded-xl font-bold">
-                  Finalizar
-                </button>
-              </div>
-            </div>
-          );
-        }
-      }
-
-      // ENTREGAS (igual que antes pero más compacto)
-      if (modo === 'entregas') {
-        if (vista === 'inicio') {
-          return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
-              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
-                <div className="text-center mb-8">
-                  <div className="text-5xl mb-4">📦</div>
-                  <h1 className="text-3xl font-bold mb-2">Confirmar Entrega</h1>
-                </div>
-                <input type="tel" value={tel} onChange={(e) => setTel(e.target.value)} placeholder="3118336562" className="w-full px-4 py-4 border-2 rounded-xl mb-4" />
-                <button onClick={async () => {
-                  if (!tel) return;
-                  setLoading(true);
-                  try {
-                    const tl = limpiarTel(tel);
-                    const res = await fetch(`${API}?action=validarCliente&telefono=${encodeURIComponent(tl)}`);
-                    const data = await res.json();
-                    if (data.success) {
-                      setCliente(data.cliente);
-                      setVista('confirmar');
-                    } else {
-                      setDecision('no_registrado');
-                      setVista('resultado');
-                    }
-                  } catch (e) {}
-                  setLoading(false);
-                }} className="w-full bg-blue-500 text-white py-4 rounded-xl font-bold mb-2">
-                  Continuar
-                </button>
-                <button onClick={() => { setModo('menu'); setTel(''); }} className="w-full text-gray-600">← Volver</button>
-              </div>
-            </div>
-          );
-        }
-
-        if (vista === 'confirmar') {
-          return (
-            <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
-              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
-                <div className="text-center mb-6">
-                  <div className="text-5xl mb-4">📦</div>
-                  <h2 className="text-2xl font-bold mb-2">Hola {cliente.nombre}!</h2>
-                  <p className="text-gray-600">¿Recibiste tu pedido?</p>
-                </div>
-                <div className="space-y-3">
-                  <button onClick={async () => {
-                    setLoading(true);
-                    try {
-                      await fetch(`${API}?action=registrarDecision&telefono=${encodeURIComponent(cliente.telefono)}&nombre=${encodeURIComponent(cliente.nombre)}&clienteId=${cliente.id}&decision=aceptado`);
-                      setDecision('aceptado');
-                      setVista('resultado');
-                      const msg = `Yo ${cliente.nombre} he recibido mi Almuerzo, muchas gracias Wimpy`;
-                      setTimeout(() => abrirWA(config.numeroWimpy, msg), 1000);
-                    } catch (e) {}
-                    setLoading(false);
-                  }} className="w-full bg-green-500 text-white py-5 rounded-xl font-bold text-lg">
-                    ✅ Sí, recibí mi pedido
-                  </button>
-                  <button onClick={async () => {
-                    setLoading(true);
-                    try {
-                      await fetch(`${API}?action=registrarDecision&telefono=${encodeURIComponent(cliente.telefono)}&nombre=${encodeURIComponent(cliente.nombre)}&clienteId=${cliente.id}&decision=cancelado`);
-                      setDecision('cancelado');
-                      setVista('resultado');
-                      const msg = `Yo ${cliente.nombre} NO he recibido mi Almuerzo. Por favor contactarme.`;
-                      setTimeout(() => abrirWA(config.numeroWimpy, msg), 1000);
-                    } catch (e) {}
-                    setLoading(false);
-                  }} className="w-full bg-red-500 text-white py-5 rounded-xl font-bold text-lg">
-                    ❌ No recibí mi pedido
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        }
-
-        if (vista === 'resultado') {
-          const ok = decision === 'aceptado';
-          return (
-            <div className={`min-h-screen ${ok ? 'bg-green-50' : 'bg-red-50'} flex items-center justify-center p-4`}>
-              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center">
-                <div className="text-6xl mb-4 animate-bounce">{ok ? '✅' : (decision === 'no_registrado' ? '⚠️' : '❌')}</div>
-                <h2 className="text-3xl font-bold mb-2">{ok ? '¡Perfecto!' : (decision === 'no_registrado' ? 'No Registrado' : 'Entrega Cancelada')}</h2>
-                <p className="text-gray-600 mb-6">{ok ? 'Gracias por confirmar' : (decision === 'no_registrado' ? 'Contacta a Wimpy para registrarte' : 'Wimpy se pondrá en contacto')}</p>
-                <button onClick={() => { setModo('menu'); setVista('inicio'); setTel(''); setCliente(null); setDecision(null); }} className="w-full bg-blue-500 text-white py-4 rounded-xl font-bold">
-                  Finalizar
-                </button>
-              </div>
-            </div>
-          );
-        }
-      }
-
-      // ADMIN (simplificado pero funcional)
-      if (modo === 'admin') {
-        if (!auth) {
-          return (
-            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
-                <div className="text-center mb-8">
-                  <div className="text-5xl mb-4">🔒</div>
-                  <h1 className="text-2xl font-bold">Admin</h1>
-                </div>
-                <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && (pass === ADMIN_PASS ? (setAuth(true), setPass('')) : alert('Contraseña incorrecta'))} placeholder="Contraseña" className="w-full px-4 py-3 border-2 rounded-xl mb-4" />
-                <button onClick={() => pass === ADMIN_PASS ? (setAuth(true), setPass('')) : alert('Contraseña incorrecta')} className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold mb-2">
-                  Ingresar
-                </button>
-                <button onClick={() => { setModo('menu'); setPass(''); }} className="w-full text-gray-600">← Volver</button>
-              </div>
-            </div>
-          );
-        }
-
-        // Panel Admin
-        return (
-          <div className="min-h-screen bg-gray-50">
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4">
-              <div className="max-w-7xl mx-auto flex justify-between items-center">
-                <h1 className="text-xl font-bold">Wimpy Admin</h1>
-                <button onClick={() => { setAuth(false); setModo('menu'); }} className="px-4 py-2 bg-white bg-opacity-20 rounded-lg">
-                  Salir
-                </button>
-              </div>
-            </div>
-            
-            <div className="max-w-7xl mx-auto p-4">
-              <div className="flex gap-2 mb-4 overflow-x-auto">
-                {['dashboard', 'config', 'productos', 'clientes', 'pedidos', 'entregas'].map(v => (
-                  <button key={v} onClick={() => setAdminVista(v)} className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${adminVista === v ? 'bg-orange-100 text-orange-700' : 'bg-white text-gray-600'}`}>
-                    {v === 'dashboard' && '📊 Dashboard'}
-                    {v === 'config' && '⚙️ Config'}
-                    {v === 'productos' && '🍔 Productos'}
-                    {v === 'clientes' && '👥 Clientes'}
-                    {v === 'pedidos' && '🛒 Pedidos'}
-                    {v === 'entregas' && '📦 Entregas'}
-                  </button>
-                ))}
-              </div>
-
-              {adminVista === 'dashboard' && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Clientes</p><p className="text-3xl font-bold text-blue-600">{CLIENTES.length}</p></div>
-                    <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Productos</p><p className="text-3xl font-bold text-green-600">{PRODUCTOS.length}</p></div>
-                    <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Pedidos</p><p className="text-3xl font-bold text-orange-600">{PEDIDOS.length}</p></div>
-                    <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Entregas</p><p className="text-3xl font-bold text-purple-600">{HISTORIAL.length}</p></div>
-                  </div>
-                  
-                  {(CLIENTES.length === 0 || PRODUCTOS.length === 0) && (
-                    <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6">
-                      <h3 className="font-bold text-yellow-800 mb-3">⚠️ Configuración Inicial Requerida</h3>
-                      <div className="space-y-2 text-sm text-yellow-700">
-                        {CLIENTES.length === 0 && (
-                          <p>• No hay clientes cargados. Ve a la sección <strong>👥 Clientes</strong> para agregarlos o verifica que tu Google Sheet tenga la hoja "Clientes" con datos.</p>
-                        )}
-                        {PRODUCTOS.length === 0 && (
-                          <p>• No hay productos cargados. Ve a la sección <strong>🍔 Productos</strong> para agregarlos.</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {adminVista === 'config' && (
-                <div className="bg-white rounded-xl p-6 shadow">
-                  <h2 className="text-xl font-bold mb-4">⚙️ Configuración</h2>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h3 className="font-bold text-blue-800 mb-3">📱 Número de WhatsApp de Wimpy</h3>
-                    {editandoConfig ? (
-                      <div className="space-y-3">
-                        <input type="tel" value={config.numeroWimpy} onChange={(e) => setConfig({...config, numeroWimpy: e.target.value})} placeholder="573118336562" className="w-full px-4 py-3 border-2 rounded-lg text-lg" />
-                        <div className="flex gap-2">
-                          <button onClick={async () => {
-                            const num = config.numeroWimpy.replace(/\s+/g, '').replace(/-/g, '').replace(/\+/g, '');
-                            const final = num.startsWith('57') ? num : '57' + num;
-                            try {
-                              await fetch(`${API}?action=guardarConfiguracion&numeroWimpy=${final}`);
-                              setConfig({numeroWimpy: final});
-                              CONFIG = {numeroWimpy: final};
-                              setEditandoConfig(false);
-                              alert('✓ Guardado');
-                            } catch (e) {
-                              alert('Error al guardar');
-                            }
-                          }} className="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold">✓ Guardar</button>
-                          <button onClick={() => { setConfig(CONFIG); setEditandoConfig(false); }} className="px-6 py-2 bg-gray-300 rounded-lg font-semibold">Cancelar</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex justify-between items-center">
-                        <div><p className="text-2xl font-bold">+{config.numeroWimpy}</p><p className="text-xs text-gray-500">Número actual</p></div>
-                        <button onClick={() => setEditandoConfig(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold">✏️ Editar</button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {adminVista === 'productos' && (
-                <div className="space-y-4">
-                  <div className="bg-white rounded-xl p-6 shadow">
-                    <h2 className="text-xl font-bold mb-4">➕ Agregar Producto</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                      <input type="text" value={nuevoP.nombre} onChange={(e) => setNuevoP({...nuevoP, nombre: e.target.value})} placeholder="Nombre del producto" className="px-4 py-3 border rounded-lg" />
-                      <input type="number" value={nuevoP.precio} onChange={(e) => setNuevoP({...nuevoP, precio: e.target.value})} placeholder="Precio (ej: 15000)" className="px-4 py-3 border rounded-lg" />
-                      <div className="relative">
-                        {mostrarNuevaCategoria ? (
-                          <div className="flex gap-2">
-                            <input type="text" value={nuevaCategoria} onChange={(e) => setNuevaCategoria(e.target.value)} placeholder="Nueva categoría" className="flex-1 px-4 py-3 border rounded-lg" />
-                            <button onClick={() => {
-                              if (nuevaCategoria.trim()) {
-                                setNuevoP({...nuevoP, categoria: nuevaCategoria});
-                                setNuevaCategoria('');
-                                setMostrarNuevaCategoria(false);
-                              }
-                            }} className="px-3 bg-green-500 text-white rounded-lg">✓</button>
-                            <button onClick={() => {
-                              setMostrarNuevaCategoria(false);
-                              setNuevaCategoria('');
-                            }} className="px-3 bg-gray-300 rounded-lg">✗</button>
-                          </div>
-                        ) : (
-                          <select value={nuevoP.categoria} onChange={(e) => {
-                            if (e.target.value === '__nueva__') {
-                              setMostrarNuevaCategoria(true);
-                            } else {
-                              setNuevoP({...nuevoP, categoria: e.target.value});
-                            }
-                          }} className="w-full px-4 py-3 border rounded-lg">
-                            <option value="">Selecciona categoría</option>
-                            {[...new Set(PRODUCTOS.map(p => p.categoria))].map(cat => (
-                              <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                            <option value="__nueva__">+ Nueva categoría</option>
-                          </select>
-                        )}
-                      </div>
-                      <button onClick={async () => {
-                        if (!nuevoP.nombre || !nuevoP.precio || !nuevoP.categoria) return alert('Completa todos los campos');
-                        setLoading(true);
-                        try {
-                          const res = await fetch(`${API}?action=agregarProducto&nombre=${encodeURIComponent(nuevoP.nombre)}&precio=${nuevoP.precio}&categoria=${encodeURIComponent(nuevoP.categoria)}`);
-                          const data = await res.json();
-                          if (data.success) {
-                            await cargarDatos();
-                            await cargarProductosPublicos();
-                            setNuevoP({nombre: '', precio: '', categoria: ''});
-                            alert('✓ Producto agregado');
-                          } else {
-                            alert('Error al agregar');
-                          }
-                        } catch (e) {
-                          alert('Error de conexión');
-                        }
-                        setLoading(false);
-                      }} disabled={loading} className="bg-green-500 text-white py-3 rounded-lg font-bold disabled:opacity-50">
-                        {loading ? '⏳' : '+ Agregar'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl p-6 shadow">
-                    <h2 className="text-xl font-bold mb-4">Lista de Productos ({PRODUCTOS.length})</h2>
-                    {PRODUCTOS.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <p className="mb-4">No hay productos aún</p>
-                        <p className="text-sm">Agrega tu primer producto arriba ⬆️</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {PRODUCTOS.map(p => (
-                          <div key={p.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                            {editP && editP.id === p.id ? (
-                              <div className="flex-1 flex gap-2 items-center flex-wrap">
-                                <input type="text" value={editP.nombre} onChange={(e) => setEditP({...editP, nombre: e.target.value})} className="flex-1 min-w-[200px] px-3 py-2 border rounded" />
-                                <input type="number" value={editP.precio} onChange={(e) => setEditP({...editP, precio: e.target.value})} className="w-32 px-3 py-2 border rounded" />
-                                <select value={editP.categoria} onChange={(e) => setEditP({...editP, categoria: e.target.value})} className="px-3 py-2 border rounded">
-                                  {[...new Set(PRODUCTOS.map(p => p.categoria))].map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                  ))}
-                                </select>
-                                <button onClick={async () => {
-                                  setLoading(true);
-                                  try {
-                                    await fetch(`${API}?action=actualizarProducto&productoId=${editP.id}&nombre=${encodeURIComponent(editP.nombre)}&precio=${editP.precio}&categoria=${encodeURIComponent(editP.categoria)}`);
-                                    await cargarDatos();
-                                    await cargarProductosPublicos();
-                                    setEditP(null);
-                                    alert('✓ Actualizado');
-                                  } catch (e) {}
-                                  setLoading(false);
-                                }} className="px-4 py-2 bg-green-500 text-white rounded font-semibold">✓</button>
-                                <button onClick={() => setEditP(null)} className="px-4 py-2 bg-gray-300 rounded font-semibold">✗</button>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="flex-1">
-                                  <p className="font-bold">{p.nombre}</p>
-                                  <p className="text-sm text-gray-600">${parseInt(p.precio).toLocaleString()} - {p.categoria}</p>
-                                </div>
-                                <div className="flex gap-2 flex-wrap">
-                                  <button onClick={async () => {
-                                    setLoading(true);
-                                    try {
-                                      await fetch(`${API}?action=toggleProductoActivo&productoId=${p.id}`);
-                                      await cargarDatos();
-                                      await cargarProductosPublicos();
-                                    } catch (e) {}
-                                    setLoading(false);
-                                  }} className={`px-3 py-1 rounded text-sm font-semibold ${p.activo ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
-                                    {p.activo ? '✓ Activo' : '✗ Inactivo'}
-                                  </button>
-                                  <button onClick={() => setEditP(p)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm font-semibold">✏️</button>
-                                  <button onClick={async () => {
-                                    if (confirm('¿Eliminar este producto?')) {
-                                      setLoading(true);
-                                      try {
-                                        await fetch(`${API}?action=eliminarProducto&productoId=${p.id}`);
-                                        await cargarDatos();
-                                        await cargarProductosPublicos();
-                                        alert('✓ Eliminado');
-                                      } catch (e) {}
-                                      setLoading(false);
-                                    }
-                                  }} className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm font-semibold">🗑️</button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {adminVista === 'clientes' && (
-                <div className="space-y-4">
-                  <div className="bg-white rounded-xl p-6 shadow">
-                    <h2 className="text-xl font-bold mb-4">➕ Agregar Cliente</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <input type="tel" value={nuevoC.telefono} onChange={(e) => setNuevoC({...nuevoC, telefono: e.target.value})} placeholder="3118336562" className="px-4 py-3 border rounded-lg" />
-                      <input type="text" value={nuevoC.nombre} onChange={(e) => setNuevoC({...nuevoC, nombre: e.target.value})} placeholder="Nombre completo" className="px-4 py-3 border rounded-lg" />
-                      <input type="email" value={nuevoC.email} onChange={(e) => setNuevoC({...nuevoC, email: e.target.value})} placeholder="Email (opcional)" className="px-4 py-3 border rounded-lg" />
-                      <button onClick={async () => {
-                        if (!nuevoC.telefono || !nuevoC.nombre) return alert('Completa teléfono y nombre');
-                        const tl = limpiarTel(nuevoC.telefono);
-                        setLoading(true);
-                        try {
-                          const res = await fetch(`${API}?action=agregarCliente&telefono=${encodeURIComponent(tl)}&nombre=${encodeURIComponent(nuevoC.nombre)}&email=${encodeURIComponent(nuevoC.email || '')}`);
-                          const data = await res.json();
-                          if (data.success) {
-                            await cargarDatos();
-                            setNuevoC({telefono: '', nombre: '', email: ''});
-                            alert('✓ Cliente agregado');
-                          } else {
-                            alert(data.message || 'Error al agregar');
-                          }
-                        } catch (e) {
-                          alert('Error de conexión');
-                        }
-                        setLoading(false);
-                      }} disabled={loading} className="bg-green-500 text-white py-3 rounded-lg font-bold disabled:opacity-50">
-                        {loading ? '⏳' : '+ Agregar'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl p-6 shadow">
-                    <h2 className="text-xl font-bold mb-4">Lista de Clientes ({CLIENTES.length})</h2>
-                    {CLIENTES.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <p className="mb-4">No hay clientes registrados</p>
-                        <p className="text-sm">Agrega tu primer cliente arriba ⬆️</p>
-                        <p className="text-sm text-blue-600 mt-2">O verifica que tu Google Sheet tenga clientes en la hoja "Clientes"</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {CLIENTES.map(c => (
-                          <div key={c.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                            {editC && editC.id === c.id ? (
-                              <div className="flex-1 flex gap-2 flex-wrap items-center">
-                                <input type="tel" value={editC.telefono} onChange={(e) => setEditC({...editC, telefono: e.target.value})} className="w-40 px-3 py-2 border rounded" />
-                                <input type="text" value={editC.nombre} onChange={(e) => setEditC({...editC, nombre: e.target.value})} className="flex-1 min-w-[150px] px-3 py-2 border rounded" />
-                                <input type="email" value={editC.email} onChange={(e) => setEditC({...editC, email: e.target.value})} className="flex-1 min-w-[150px] px-3 py-2 border rounded" />
-                                <button onClick={async () => {
-                                  const tl = limpiarTel(editC.telefono);
-                                  setLoading(true);
-                                  try {
-                                    await fetch(`${API}?action=actualizarCliente&clienteId=${editC.id}&telefono=${encodeURIComponent(tl)}&nombre=${encodeURIComponent(editC.nombre)}&email=${encodeURIComponent(editC.email || '')}`);
-                                    await cargarDatos();
-                                    setEditC(null);
-                                    alert('✓ Actualizado');
-                                  } catch (e) {}
-                                  setLoading(false);
-                                }} className="px-4 py-2 bg-green-500 text-white rounded font-semibold">✓</button>
-                                <button onClick={() => setEditC(null)} className="px-4 py-2 bg-gray-300 rounded font-semibold">✗</button>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="flex-1">
-                                  <p className="font-bold">{c.nombre}</p>
-                                  <p className="text-sm text-gray-600">{c.telefono}</p>
-                                  {c.email && <p className="text-xs text-gray-500">{c.email}</p>}
-                                </div>
-                                <div className="flex gap-2 flex-wrap">
-                                  <button onClick={async () => {
-                                    setLoading(true);
-                                    try {
-                                      await fetch(`${API}?action=toggleClienteActivo&clienteId=${c.id}`);
-                                      await cargarDatos();
-                                    } catch (e) {}
-                                    setLoading(false);
-                                  }} className={`px-3 py-1 rounded text-sm font-semibold ${c.activo ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
-                                    {c.activo ? '✓ Activo' : '✗ Inactivo'}
-                                  </button>
-                                  <button onClick={() => setEditC(c)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm font-semibold">✏️</button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}gray-300 rounded font-semibold">✗</button>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex-1">
-                                <p className="font-bold">{c.nombre}</p>
-                                <p className="text-sm text-gray-600">{c.telefono}</p>
-                                {c.email && <p className="text-xs text-gray-500">{c.email}</p>}
-                              </div>
-                              <div className="flex gap-2">
-                                <button onClick={async () => {
-                                  try {
-                                    await fetch(`${API}?action=toggleClienteActivo&clienteId=${c.id}`);
-                                    await cargarDatos();
-                                  } catch (e) {}
-                                }} className={`px-3 py-1 rounded text-sm font-semibold ${c.activo ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
-                                  {c.activo ? '✓ Activo' : '✗ Inactivo'}
-                                </button>
-                                <button onClick={() => setEditC(c)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm font-semibold">✏️</button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {adminVista === 'pedidos' && (
-                <div className="bg-white rounded-xl p-6 shadow">
-                  <h2 className="text-xl font-bold mb-4">Historial de Pedidos ({PEDIDOS.length})</h2>
-                  {PEDIDOS.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">No hay pedidos aún</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {PEDIDOS.slice().reverse().map((p, i) => {
-                        let productos = [];
-                        try { productos = JSON.parse(p.productos); } catch (e) {}
-                        return (
-                          <div key={i} className="border border-gray-200 rounded-lg p-4">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <p className="font-bold">{p.nombre}</p>
-                                <p className="text-sm text-gray-600">{p.telefono}</p>
-                                <p className="text-xs text-gray-500">{p.fecha} - {p.hora}</p>
-                              </div>
-                              <p className="text-xl font-bold text-green-600">${parseInt(p.total).toLocaleString()}</p>
-                            </div>
-                            <div className="bg-gray-50 rounded p-3 text-sm">
-                              {productos.map((item, j) => (
-                                <p key={j} className="text-gray-700">• {item.cantidad}x {item.nombre} - ${(item.precio * item.cantidad).toLocaleString()}</p>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {adminVista === 'entregas' && (
-                <div className="bg-white rounded-xl p-6 shadow">
-                  <h2 className="text-xl font-bold mb-4">Historial de Entregas ({HISTORIAL.length})</h2>
-                  {HISTORIAL.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">No hay entregas aún</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {HISTORIAL.slice().reverse().map((h, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                          <div className="flex-1">
-                            <p className="font-bold">{h.nombre}</p>
-                            <p className="text-sm text-gray-600">{h.telefono}</p>
-                            <p className="text-xs text-gray-500">{h.fecha} - {h.hora}</p>
-                          </div>
-                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${h.decision === 'aceptado' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {h.decision === 'aceptado' ? '✓ Aceptado' : '✗ Cancelado'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      }
-
-      return null;
-    }
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
-</body>
+mostrar('inicio');
+</script>
+</cuerpo>
 </html>

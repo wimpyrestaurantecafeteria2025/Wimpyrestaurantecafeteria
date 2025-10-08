@@ -44,8 +44,10 @@
       const [otpGen, setOtpGen] = useState('');
       
       // Productos
-      const [nuevoP, setNuevoP] = useState({ nombre: '', precio: '', categoria: 'Almuerzos' });
+      const [nuevoP, setNuevoP] = useState({ nombre: '', precio: '', categoria: '' });
       const [editP, setEditP] = useState(null);
+      const [nuevaCategoria, setNuevaCategoria] = useState('');
+      const [mostrarNuevaCategoria, setMostrarNuevaCategoria] = useState(false);
       
       // Clientes
       const [nuevoC, setNuevoC] = useState({ telefono: '', nombre: '', email: '' });
@@ -474,11 +476,27 @@
               </div>
 
               {adminVista === 'dashboard' && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Clientes</p><p className="text-3xl font-bold text-blue-600">{CLIENTES.length}</p></div>
-                  <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Productos</p><p className="text-3xl font-bold text-green-600">{PRODUCTOS.length}</p></div>
-                  <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Pedidos</p><p className="text-3xl font-bold text-orange-600">{PEDIDOS.length}</p></div>
-                  <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Entregas</p><p className="text-3xl font-bold text-purple-600">{HISTORIAL.length}</p></div>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Clientes</p><p className="text-3xl font-bold text-blue-600">{CLIENTES.length}</p></div>
+                    <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Productos</p><p className="text-3xl font-bold text-green-600">{PRODUCTOS.length}</p></div>
+                    <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Pedidos</p><p className="text-3xl font-bold text-orange-600">{PEDIDOS.length}</p></div>
+                    <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Entregas</p><p className="text-3xl font-bold text-purple-600">{HISTORIAL.length}</p></div>
+                  </div>
+                  
+                  {(CLIENTES.length === 0 || PRODUCTOS.length === 0) && (
+                    <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6">
+                      <h3 className="font-bold text-yellow-800 mb-3">⚠️ Configuración Inicial Requerida</h3>
+                      <div className="space-y-2 text-sm text-yellow-700">
+                        {CLIENTES.length === 0 && (
+                          <p>• No hay clientes cargados. Ve a la sección <strong>👥 Clientes</strong> para agregarlos o verifica que tu Google Sheet tenga la hoja "Clientes" con datos.</p>
+                        )}
+                        {PRODUCTOS.length === 0 && (
+                          <p>• No hay productos cargados. Ve a la sección <strong>🍔 Productos</strong> para agregarlos.</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -521,81 +539,136 @@
                 <div className="space-y-4">
                   <div className="bg-white rounded-xl p-6 shadow">
                     <h2 className="text-xl font-bold mb-4">➕ Agregar Producto</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <input type="text" value={nuevoP.nombre} onChange={(e) => setNuevoP({...nuevoP, nombre: e.target.value})} placeholder="Nombre" className="px-4 py-3 border rounded-lg" />
-                      <input type="number" value={nuevoP.precio} onChange={(e) => setNuevoP({...nuevoP, precio: e.target.value})} placeholder="Precio" className="px-4 py-3 border rounded-lg" />
-                      <select value={nuevoP.categoria} onChange={(e) => setNuevoP({...nuevoP, categoria: e.target.value})} className="px-4 py-3 border rounded-lg">
-                        <option>Almuerzos</option>
-                        <option>Bebidas</option>
-                        <option>Postres</option>
-                      </select>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                      <input type="text" value={nuevoP.nombre} onChange={(e) => setNuevoP({...nuevoP, nombre: e.target.value})} placeholder="Nombre del producto" className="px-4 py-3 border rounded-lg" />
+                      <input type="number" value={nuevoP.precio} onChange={(e) => setNuevoP({...nuevoP, precio: e.target.value})} placeholder="Precio (ej: 15000)" className="px-4 py-3 border rounded-lg" />
+                      <div className="relative">
+                        {mostrarNuevaCategoria ? (
+                          <div className="flex gap-2">
+                            <input type="text" value={nuevaCategoria} onChange={(e) => setNuevaCategoria(e.target.value)} placeholder="Nueva categoría" className="flex-1 px-4 py-3 border rounded-lg" />
+                            <button onClick={() => {
+                              if (nuevaCategoria.trim()) {
+                                setNuevoP({...nuevoP, categoria: nuevaCategoria});
+                                setNuevaCategoria('');
+                                setMostrarNuevaCategoria(false);
+                              }
+                            }} className="px-3 bg-green-500 text-white rounded-lg">✓</button>
+                            <button onClick={() => {
+                              setMostrarNuevaCategoria(false);
+                              setNuevaCategoria('');
+                            }} className="px-3 bg-gray-300 rounded-lg">✗</button>
+                          </div>
+                        ) : (
+                          <select value={nuevoP.categoria} onChange={(e) => {
+                            if (e.target.value === '__nueva__') {
+                              setMostrarNuevaCategoria(true);
+                            } else {
+                              setNuevoP({...nuevoP, categoria: e.target.value});
+                            }
+                          }} className="w-full px-4 py-3 border rounded-lg">
+                            <option value="">Selecciona categoría</option>
+                            {[...new Set(PRODUCTOS.map(p => p.categoria))].map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                            <option value="__nueva__">+ Nueva categoría</option>
+                          </select>
+                        )}
+                      </div>
                       <button onClick={async () => {
-                        if (!nuevoP.nombre || !nuevoP.precio) return alert('Completa los campos');
+                        if (!nuevoP.nombre || !nuevoP.precio || !nuevoP.categoria) return alert('Completa todos los campos');
+                        setLoading(true);
                         try {
-                          await fetch(`${API}?action=agregarProducto&nombre=${encodeURIComponent(nuevoP.nombre)}&precio=${nuevoP.precio}&categoria=${encodeURIComponent(nuevoP.categoria)}`);
-                          await cargarDatos();
-                          setNuevoP({nombre: '', precio: '', categoria: 'Almuerzos'});
-                          alert('✓ Agregado');
-                        } catch (e) {}
-                      }} className="bg-green-500 text-white py-3 rounded-lg font-bold">+ Agregar</button>
+                          const res = await fetch(`${API}?action=agregarProducto&nombre=${encodeURIComponent(nuevoP.nombre)}&precio=${nuevoP.precio}&categoria=${encodeURIComponent(nuevoP.categoria)}`);
+                          const data = await res.json();
+                          if (data.success) {
+                            await cargarDatos();
+                            await cargarProductosPublicos();
+                            setNuevoP({nombre: '', precio: '', categoria: ''});
+                            alert('✓ Producto agregado');
+                          } else {
+                            alert('Error al agregar');
+                          }
+                        } catch (e) {
+                          alert('Error de conexión');
+                        }
+                        setLoading(false);
+                      }} disabled={loading} className="bg-green-500 text-white py-3 rounded-lg font-bold disabled:opacity-50">
+                        {loading ? '⏳' : '+ Agregar'}
+                      </button>
                     </div>
                   </div>
 
                   <div className="bg-white rounded-xl p-6 shadow">
-                    <h2 className="text-xl font-bold mb-4">Lista de Productos</h2>
-                    <div className="space-y-2">
-                      {PRODUCTOS.map(p => (
-                        <div key={p.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                          {editP && editP.id === p.id ? (
-                            <div className="flex-1 flex gap-2">
-                              <input type="text" value={editP.nombre} onChange={(e) => setEditP({...editP, nombre: e.target.value})} className="flex-1 px-3 py-2 border rounded" />
-                              <input type="number" value={editP.precio} onChange={(e) => setEditP({...editP, precio: e.target.value})} className="w-32 px-3 py-2 border rounded" />
-                              <select value={editP.categoria} onChange={(e) => setEditP({...editP, categoria: e.target.value})} className="px-3 py-2 border rounded">
-                                <option>Almuerzos</option>
-                                <option>Bebidas</option>
-                                <option>Postres</option>
-                              </select>
-                              <button onClick={async () => {
-                                try {
-                                  await fetch(`${API}?action=actualizarProducto&productoId=${editP.id}&nombre=${encodeURIComponent(editP.nombre)}&precio=${editP.precio}&categoria=${encodeURIComponent(editP.categoria)}`);
-                                  await cargarDatos();
-                                  setEditP(null);
-                                  alert('✓ Actualizado');
-                                } catch (e) {}
-                              }} className="px-4 py-2 bg-green-500 text-white rounded font-semibold">✓</button>
-                              <button onClick={() => setEditP(null)} className="px-4 py-2 bg-gray-300 rounded font-semibold">✗</button>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex-1">
-                                <p className="font-bold">{p.nombre}</p>
-                                <p className="text-sm text-gray-600">${p.precio.toLocaleString()} - {p.categoria}</p>
-                              </div>
-                              <div className="flex gap-2">
+                    <h2 className="text-xl font-bold mb-4">Lista de Productos ({PRODUCTOS.length})</h2>
+                    {PRODUCTOS.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p className="mb-4">No hay productos aún</p>
+                        <p className="text-sm">Agrega tu primer producto arriba ⬆️</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {PRODUCTOS.map(p => (
+                          <div key={p.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            {editP && editP.id === p.id ? (
+                              <div className="flex-1 flex gap-2 items-center flex-wrap">
+                                <input type="text" value={editP.nombre} onChange={(e) => setEditP({...editP, nombre: e.target.value})} className="flex-1 min-w-[200px] px-3 py-2 border rounded" />
+                                <input type="number" value={editP.precio} onChange={(e) => setEditP({...editP, precio: e.target.value})} className="w-32 px-3 py-2 border rounded" />
+                                <select value={editP.categoria} onChange={(e) => setEditP({...editP, categoria: e.target.value})} className="px-3 py-2 border rounded">
+                                  {[...new Set(PRODUCTOS.map(p => p.categoria))].map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                  ))}
+                                </select>
                                 <button onClick={async () => {
+                                  setLoading(true);
                                   try {
-                                    await fetch(`${API}?action=toggleProductoActivo&productoId=${p.id}`);
+                                    await fetch(`${API}?action=actualizarProducto&productoId=${editP.id}&nombre=${encodeURIComponent(editP.nombre)}&precio=${editP.precio}&categoria=${encodeURIComponent(editP.categoria)}`);
                                     await cargarDatos();
+                                    await cargarProductosPublicos();
+                                    setEditP(null);
+                                    alert('✓ Actualizado');
                                   } catch (e) {}
-                                }} className={`px-3 py-1 rounded text-sm font-semibold ${p.activo ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
-                                  {p.activo ? '✓ Activo' : '✗ Inactivo'}
-                                </button>
-                                <button onClick={() => setEditP(p)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm font-semibold">✏️</button>
-                                <button onClick={async () => {
-                                  if (confirm('¿Eliminar?')) {
-                                    try {
-                                      await fetch(`${API}?action=eliminarProducto&productoId=${p.id}`);
-                                      await cargarDatos();
-                                      alert('✓ Eliminado');
-                                    } catch (e) {}
-                                  }
-                                }} className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm font-semibold">🗑️</button>
+                                  setLoading(false);
+                                }} className="px-4 py-2 bg-green-500 text-white rounded font-semibold">✓</button>
+                                <button onClick={() => setEditP(null)} className="px-4 py-2 bg-gray-300 rounded font-semibold">✗</button>
                               </div>
-                            </>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                            ) : (
+                              <>
+                                <div className="flex-1">
+                                  <p className="font-bold">{p.nombre}</p>
+                                  <p className="text-sm text-gray-600">${parseInt(p.precio).toLocaleString()} - {p.categoria}</p>
+                                </div>
+                                <div className="flex gap-2 flex-wrap">
+                                  <button onClick={async () => {
+                                    setLoading(true);
+                                    try {
+                                      await fetch(`${API}?action=toggleProductoActivo&productoId=${p.id}`);
+                                      await cargarDatos();
+                                      await cargarProductosPublicos();
+                                    } catch (e) {}
+                                    setLoading(false);
+                                  }} className={`px-3 py-1 rounded text-sm font-semibold ${p.activo ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                                    {p.activo ? '✓ Activo' : '✗ Inactivo'}
+                                  </button>
+                                  <button onClick={() => setEditP(p)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm font-semibold">✏️</button>
+                                  <button onClick={async () => {
+                                    if (confirm('¿Eliminar este producto?')) {
+                                      setLoading(true);
+                                      try {
+                                        await fetch(`${API}?action=eliminarProducto&productoId=${p.id}`);
+                                        await cargarDatos();
+                                        await cargarProductosPublicos();
+                                        alert('✓ Eliminado');
+                                      } catch (e) {}
+                                      setLoading(false);
+                                    }
+                                  }} className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm font-semibold">🗑️</button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -605,47 +678,92 @@
                   <div className="bg-white rounded-xl p-6 shadow">
                     <h2 className="text-xl font-bold mb-4">➕ Agregar Cliente</h2>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <input type="tel" value={nuevoC.telefono} onChange={(e) => setNuevoC({...nuevoC, telefono: e.target.value})} placeholder="Teléfono" className="px-4 py-3 border rounded-lg" />
-                      <input type="text" value={nuevoC.nombre} onChange={(e) => setNuevoC({...nuevoC, nombre: e.target.value})} placeholder="Nombre" className="px-4 py-3 border rounded-lg" />
-                      <input type="email" value={nuevoC.email} onChange={(e) => setNuevoC({...nuevoC, email: e.target.value})} placeholder="Email" className="px-4 py-3 border rounded-lg" />
+                      <input type="tel" value={nuevoC.telefono} onChange={(e) => setNuevoC({...nuevoC, telefono: e.target.value})} placeholder="3118336562" className="px-4 py-3 border rounded-lg" />
+                      <input type="text" value={nuevoC.nombre} onChange={(e) => setNuevoC({...nuevoC, nombre: e.target.value})} placeholder="Nombre completo" className="px-4 py-3 border rounded-lg" />
+                      <input type="email" value={nuevoC.email} onChange={(e) => setNuevoC({...nuevoC, email: e.target.value})} placeholder="Email (opcional)" className="px-4 py-3 border rounded-lg" />
                       <button onClick={async () => {
                         if (!nuevoC.telefono || !nuevoC.nombre) return alert('Completa teléfono y nombre');
                         const tl = limpiarTel(nuevoC.telefono);
+                        setLoading(true);
                         try {
                           const res = await fetch(`${API}?action=agregarCliente&telefono=${encodeURIComponent(tl)}&nombre=${encodeURIComponent(nuevoC.nombre)}&email=${encodeURIComponent(nuevoC.email || '')}`);
                           const data = await res.json();
                           if (data.success) {
                             await cargarDatos();
                             setNuevoC({telefono: '', nombre: '', email: ''});
-                            alert('✓ Agregado');
+                            alert('✓ Cliente agregado');
                           } else {
-                            alert(data.message);
+                            alert(data.message || 'Error al agregar');
                           }
-                        } catch (e) {}
-                      }} className="bg-green-500 text-white py-3 rounded-lg font-bold">+ Agregar</button>
+                        } catch (e) {
+                          alert('Error de conexión');
+                        }
+                        setLoading(false);
+                      }} disabled={loading} className="bg-green-500 text-white py-3 rounded-lg font-bold disabled:opacity-50">
+                        {loading ? '⏳' : '+ Agregar'}
+                      </button>
                     </div>
                   </div>
 
                   <div className="bg-white rounded-xl p-6 shadow">
                     <h2 className="text-xl font-bold mb-4">Lista de Clientes ({CLIENTES.length})</h2>
-                    <div className="space-y-2">
-                      {CLIENTES.map(c => (
-                        <div key={c.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                          {editC && editC.id === c.id ? (
-                            <div className="flex-1 flex gap-2">
-                              <input type="tel" value={editC.telefono} onChange={(e) => setEditC({...editC, telefono: e.target.value})} className="w-40 px-3 py-2 border rounded" />
-                              <input type="text" value={editC.nombre} onChange={(e) => setEditC({...editC, nombre: e.target.value})} className="flex-1 px-3 py-2 border rounded" />
-                              <input type="email" value={editC.email} onChange={(e) => setEditC({...editC, email: e.target.value})} className="flex-1 px-3 py-2 border rounded" />
-                              <button onClick={async () => {
-                                const tl = limpiarTel(editC.telefono);
-                                try {
-                                  await fetch(`${API}?action=actualizarCliente&clienteId=${editC.id}&telefono=${encodeURIComponent(tl)}&nombre=${encodeURIComponent(editC.nombre)}&email=${encodeURIComponent(editC.email || '')}`);
-                                  await cargarDatos();
-                                  setEditC(null);
-                                  alert('✓ Actualizado');
-                                } catch (e) {}
-                              }} className="px-4 py-2 bg-green-500 text-white rounded font-semibold">✓</button>
-                              <button onClick={() => setEditC(null)} className="px-4 py-2 bg-gray-300 rounded font-semibold">✗</button>
+                    {CLIENTES.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p className="mb-4">No hay clientes registrados</p>
+                        <p className="text-sm">Agrega tu primer cliente arriba ⬆️</p>
+                        <p className="text-sm text-blue-600 mt-2">O verifica que tu Google Sheet tenga clientes en la hoja "Clientes"</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {CLIENTES.map(c => (
+                          <div key={c.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            {editC && editC.id === c.id ? (
+                              <div className="flex-1 flex gap-2 flex-wrap items-center">
+                                <input type="tel" value={editC.telefono} onChange={(e) => setEditC({...editC, telefono: e.target.value})} className="w-40 px-3 py-2 border rounded" />
+                                <input type="text" value={editC.nombre} onChange={(e) => setEditC({...editC, nombre: e.target.value})} className="flex-1 min-w-[150px] px-3 py-2 border rounded" />
+                                <input type="email" value={editC.email} onChange={(e) => setEditC({...editC, email: e.target.value})} className="flex-1 min-w-[150px] px-3 py-2 border rounded" />
+                                <button onClick={async () => {
+                                  const tl = limpiarTel(editC.telefono);
+                                  setLoading(true);
+                                  try {
+                                    await fetch(`${API}?action=actualizarCliente&clienteId=${editC.id}&telefono=${encodeURIComponent(tl)}&nombre=${encodeURIComponent(editC.nombre)}&email=${encodeURIComponent(editC.email || '')}`);
+                                    await cargarDatos();
+                                    setEditC(null);
+                                    alert('✓ Actualizado');
+                                  } catch (e) {}
+                                  setLoading(false);
+                                }} className="px-4 py-2 bg-green-500 text-white rounded font-semibold">✓</button>
+                                <button onClick={() => setEditC(null)} className="px-4 py-2 bg-gray-300 rounded font-semibold">✗</button>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex-1">
+                                  <p className="font-bold">{c.nombre}</p>
+                                  <p className="text-sm text-gray-600">{c.telefono}</p>
+                                  {c.email && <p className="text-xs text-gray-500">{c.email}</p>}
+                                </div>
+                                <div className="flex gap-2 flex-wrap">
+                                  <button onClick={async () => {
+                                    setLoading(true);
+                                    try {
+                                      await fetch(`${API}?action=toggleClienteActivo&clienteId=${c.id}`);
+                                      await cargarDatos();
+                                    } catch (e) {}
+                                    setLoading(false);
+                                  }} className={`px-3 py-1 rounded text-sm font-semibold ${c.activo ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                                    {c.activo ? '✓ Activo' : '✗ Inactivo'}
+                                  </button>
+                                  <button onClick={() => setEditC(c)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm font-semibold">✏️</button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}gray-300 rounded font-semibold">✗</button>
                             </div>
                           ) : (
                             <>

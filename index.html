@@ -1,863 +1,731 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Wimpy - Pedidos y Confirmación</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wimpy - Sistema Completo</title>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍔</text></svg>">
-  <style>
-    @media print {
-      body * { visibility: hidden; }
-      #cuenta-cobro, #cuenta-cobro * { visibility: visible; }
-      #cuenta-cobro { position: absolute; left: 0; top: 0; }
-    }
-  </style>
 </head>
-<body class="antialiased">
+<body>
   <div id="root"></div>
-
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
 
-    // =========================================
-    // CONFIG (poner aquí el URL de tu Apps Script)
-    // =========================================
-    const GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec';
-    // Valor por defecto (será sobreescrito por la configuración del Sheets al cargar)
-    const DEFAULT_NUMERO_WIMPY = '573118336562';
+    // CONFIGURACIÓN
+    const API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec';
+    const ADMIN_PASS = 'wimpy2025';
 
-    // =========================================
-    // APP
-    // =========================================
+    // DATOS GLOBALES
+    let CLIENTES = [];
+    let PRODUCTOS = [];
+    let HISTORIAL = [];
+    let PEDIDOS = [];
+    let CONFIG = { numeroWimpy: '573118336562' };
+
     function App() {
-      // vistas generales
-      const [vista, setVista] = useState('inicio'); // inicio | confirmacion | resultado | admin
-      const [telefono, setTelefono] = useState('');
-      const [clienteValidado, setClienteValidado] = useState(null);
-      const [cargando, setCargando] = useState(false);
-      const [cargandoDatos, setCargandoDatos] = useState(true);
-
-      // admin
-      const [autenticado, setAutenticado] = useState(false);
-      const [passwordInput, setPasswordInput] = useState('');
-      const ADMIN_PASSWORD = 'wimpy2025';
-      const [vistaAdmin, setVistaAdmin] = useState('dashboard'); // dashboard | configuracion | clientes | productos | pedidos | reportes | factura
-
-      // datos persistentes (traídos desde Google Sheets)
-      const [CONFIG, setCONFIG] = useState({ numero_wimpy: DEFAULT_NUMERO_WIMPY });
-      const [CLIENTES_DB, setCLIENTES_DB] = useState([]);
-      const [HISTORIAL, setHISTORIAL] = useState([]);
-      const [PRODUCTOS_DB, setPRODUCTOS_DB] = useState([]);
-      const [PEDIDOS_DB, setPEDIDOS_DB] = useState([]);
-
-      // productos / carrito
-      const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', precio: '' });
-      const [editProductoId, setEditProductoId] = useState(null);
+      const [modo, setModo] = useState('menu'); // menu, pedidos, entregas, admin
+      const [vista, setVista] = useState('inicio');
+      const [tel, setTel] = useState('');
+      const [cliente, setCliente] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [auth, setAuth] = useState(false);
+      const [pass, setPass] = useState('');
+      const [adminVista, setAdminVista] = useState('dashboard');
+      const [config, setConfig] = useState(CONFIG);
+      const [editandoConfig, setEditandoConfig] = useState(false);
+      
+      // Pedidos
       const [carrito, setCarrito] = useState([]);
-
-      // facturación (mantengo tu estructura)
-      const [datosFactura, setDatosFactura] = useState({
-        numeroFactura: '',
-        empresaCliente: '',
-        mesFactura: new Date().getMonth(),
-        anioFactura: new Date().getFullYear(),
-        valorAlmuerzo: '',
-        fechaEmision: new Date().toISOString().split('T')[0]
-      });
-
-      // filtros de reportes
-      const [filtroMes, setFiltroMes] = useState(new Date().getMonth());
-      const [filtroAnio, setFiltroAnio] = useState(new Date().getFullYear());
-      const [filtroCliente, setFiltroCliente] = useState('todos');
-
-      // carga inicial (clientes, historial, productos, config)
-      useEffect(() => {
-        cargarDatosIniciales();
-      }, []);
+      const [otp, setOtp] = useState('');
+      const [otpGen, setOtpGen] = useState('');
+      
+      // Productos
+      const [nuevoP, setNuevoP] = useState({ nombre: '', precio: '', categoria: 'Almuerzos' });
+      const [editP, setEditP] = useState(null);
+      
+      // Clientes
+      const [nuevoC, setNuevoC] = useState({ telefono: '', nombre: '', email: '' });
+      const [editC, setEditC] = useState(null);
+      
+      // Entregas
+      const [decision, setDecision] = useState(null);
 
       useEffect(() => {
-        // cuando se autentica admin, recargar datos (si hace falta)
-        if (autenticado) cargarDatosIniciales();
-      }, [autenticado]);
+        if (auth) cargarDatos();
+        cargarConfig();
+      }, [auth]);
 
-      // ============================
-      // FUNCIONES DE BACKEND (Sheets)
-      // ============================
-      const fetchJSON = async (url) => {
-        const res = await fetch(url);
-        return await res.json();
-      };
-
-      const cargarDatosIniciales = async () => {
-        setCargandoDatos(true);
+      const cargarDatos = async () => {
         try {
-          // Configuración
-          try {
-            const cfg = await fetchJSON(`${GOOGLE_SHEETS_API}?action=obtenerConfiguracion`);
-            if (cfg && cfg.success) {
-              setCONFIG({ numero_wimpy: (cfg.numero || DEFAULT_NUMERO_WIMPY) });
-            } else {
-              setCONFIG({ numero_wimpy: DEFAULT_NUMERO_WIMPY });
-            }
-          } catch (e) {
-            console.warn('No se pudo cargar configuración, usando default', e);
-            setCONFIG({ numero_wimpy: DEFAULT_NUMERO_WIMPY });
-          }
-
-          // Clientes
-          try {
-            const c = await fetchJSON(`${GOOGLE_SHEETS_API}?action=obtenerClientes`);
-            if (c && c.success) setCLIENTES_DB(c.clientes || []);
-          } catch (e) { console.warn('clientes', e); }
-
-          // Historial (entregas)
-          try {
-            const h = await fetchJSON(`${GOOGLE_SHEETS_API}?action=obtenerHistorial`);
-            if (h && h.success) setHISTORIAL(h.historial || []);
-          } catch (e) { console.warn('historial', e); }
-
-          // Productos
-          try {
-            const p = await fetchJSON(`${GOOGLE_SHEETS_API}?action=obtenerProductos`);
-            if (p && p.success) setPRODUCTOS_DB(p.productos || []);
-          } catch (e) { console.warn('productos', e); }
-
-          // Pedidos (opcional)
-          try {
-            const pd = await fetchJSON(`${GOOGLE_SHEETS_API}?action=obtenerPedidos`);
-            if (pd && pd.success) setPEDIDOS_DB(pd.pedidos || []);
-          } catch (e) { /* no es crítico */ }
-        } catch (error) {
-          console.error('Error cargando datos iniciales', error);
-        }
-        setCargandoDatos(false);
-      };
-
-      // ============================
-      // UTILIDADES
-      // ============================
-      const limpiarTelefono = (tel) => {
-        let limpio = (tel || '').toString().replace(/\s+/g, '').replace(/-/g, '').replace(/\./g,'');
-        limpio = limpio.replace(/\(/g,'').replace(/\)/g,'');
-        // quitar + si vino
-        if (limpio.startsWith('+')) limpio = limpio.slice(1);
-        // si empieza por 0 lo quitamos (opcional)
-        if (limpio.startsWith('0')) limpio = limpio.slice(1);
-        if (!limpio.startsWith('57')) {
-          // asumimos Colombia
-          limpio = '57' + limpio;
-        }
-        return '+' + limpio;
-      };
-
-      const soloNumeroParaWhatsApp = (tel) => {
-        // formato sin + para wa.me
-        let t = (tel || '').toString().replace(/\s+/g, '').replace(/-/g, '').replace(/\+/g, '');
-        if (!t.startsWith('57')) t = '57' + t;
-        return t;
-      };
-
-      const nombreMes = (m) => {
-        const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-        return meses[m];
-      };
-
-      // ============================
-      // CONFIGURACIÓN -> Guardar en Sheets
-      // ============================
-      const guardarNumeroWimpy = async () => {
-        try {
-          let limpio = numeroLimpioDeInput(CONFIG.numero_wimpy || DEFAULT_NUMERO_WIMPY);
-          // quitar + si lo escribió
-          if (limpio.startsWith('+')) limpio = limpio.slice(1);
-          if (!limpio.startsWith('57')) limpio = '57' + limpio;
-          // persistir en sheets
-          setCargando(true);
-          const resp = await fetchJSON(`${GOOGLE_SHEETS_API}?action=guardarConfiguracion&numero=${encodeURIComponent(limpio)}`);
-          if (resp && resp.success) {
-            setCONFIG({ numero_wimpy: limpio });
-            alert('✓ Número de WhatsApp de Wimpy actualizado');
-          } else {
-            alert('No se pudo guardar la configuración en Sheets');
-          }
+          const [c, p, h, pd] = await Promise.all([
+            fetch(`${API}?action=obtenerClientes`).then(r => r.json()),
+            fetch(`${API}?action=obtenerProductos`).then(r => r.json()),
+            fetch(`${API}?action=obtenerHistorial`).then(r => r.json()),
+            fetch(`${API}?action=obtenerPedidos`).then(r => r.json())
+          ]);
+          if (c.success) CLIENTES = c.clientes;
+          if (p.success) PRODUCTOS = p.productos;
+          if (h.success) HISTORIAL = h.historial;
+          if (pd.success) PEDIDOS = pd.pedidos;
         } catch (e) {
           console.error(e);
-          alert('Error guardando configuración');
-        } finally { setCargando(false); }
-      };
-
-      const numeroLimpioDeInput = (s) => {
-        if (!s) return '';
-        return s.toString().replace(/\s+/g,'').replace(/-/g,'').replace(/\+/g,'');
-      };
-
-      // ============================
-      // PRODUCTOS CRUD (Sheets)
-      // ============================
-      const agregarProducto = async () => {
-        if (!nuevoProducto.nombre || !nuevoProducto.precio) {
-          alert('Completa nombre y precio');
-          return;
         }
-        setCargando(true);
+      };
+
+      const cargarConfig = async () => {
         try {
-          const resp = await fetchJSON(`${GOOGLE_SHEETS_API}?action=agregarProducto&nombre=${encodeURIComponent(nuevoProducto.nombre)}&precio=${encodeURIComponent(nuevoProducto.precio)}`);
-          if (resp && resp.success) {
-            alert('✓ Producto agregado');
-            setNuevoProducto({ nombre: '', precio: '' });
-            await cargarDatosIniciales();
-            setVistaAdmin('productos');
-          } else {
-            alert('Error al agregar producto');
+          const res = await fetch(`${API}?action=obtenerConfiguracion`);
+          const data = await res.json();
+          if (data.success) {
+            CONFIG = data.configuracion;
+            setConfig(data.configuracion);
           }
-        } catch (e) {
-          console.error(e);
-          alert('Error de conexión');
-        } finally { setCargando(false); }
+        } catch (e) {}
       };
 
-      const iniciarEdicionProducto = (p) => {
-        setEditProductoId(p.id);
-        setNuevoProducto({ nombre: p.nombre, precio: p.precio });
-        // navegar a la vista productos (si no está)
-        setVistaAdmin('productos');
+      const limpiarTel = (t) => {
+        let l = t.replace(/\s+/g, '').replace(/-/g, '');
+        if (!l.startsWith('+')) l = l.startsWith('57') ? '+' + l : '+57' + l;
+        return l;
       };
 
-      const guardarEdicionProducto = async () => {
-        if (!editProductoId || !nuevoProducto.nombre) {
-          alert('Completa los datos');
-          return;
-        }
-        setCargando(true);
-        try {
-          const resp = await fetchJSON(`${GOOGLE_SHEETS_API}?action=editarProducto&id=${encodeURIComponent(editProductoId)}&nombre=${encodeURIComponent(nuevoProducto.nombre)}&precio=${encodeURIComponent(nuevoProducto.precio)}`);
-          if (resp && resp.success) {
-            alert('✓ Producto actualizado');
-            setNuevoProducto({ nombre: '', precio: '' });
-            setEditProductoId(null);
-            await cargarDatosIniciales();
-          } else {
-            alert('Error al editar producto');
-          }
-        } catch (e) {
-          console.error(e);
-          alert('Error de conexión');
-        } finally { setCargando(false); }
-      };
+      const genOTP = () => Math.floor(1000 + Math.random() * 9000).toString();
 
-      const eliminarProducto = async (id) => {
-        if (!confirm('¿Eliminar este producto?')) return;
-        setCargando(true);
-        try {
-          const resp = await fetchJSON(`${GOOGLE_SHEETS_API}?action=eliminarProducto&id=${encodeURIComponent(id)}`);
-          if (resp && resp.success) {
-            alert('✓ Producto eliminado');
-            await cargarDatosIniciales();
-          } else {
-            alert('Error al eliminar producto');
-          }
-        } catch (e) {
-          console.error(e);
-          alert('Error de conexión');
-        } finally { setCargando(false); }
-      };
-
-      // ============================
-      // PEDIDOS (Carrito -> registrarPedido en Sheets)
-      // ============================
-      const agregarAlCarrito = (producto) => {
-        setCarrito(prev => {
-          const copia = [...prev];
-          const existe = copia.find(i => i.id === producto.id);
-          if (existe) {
-            existe.cantidad = (existe.cantidad || 1) + 1;
-          } else {
-            copia.push({ ...producto, cantidad: 1 });
-          }
-          return copia;
-        });
-      };
-
-      const quitarDelCarrito = (id) => {
-        setCarrito(prev => prev.filter(i => i.id !== id));
-      };
-
-      const cambiarCantidad = (id, cantidad) => {
-        setCarrito(prev => prev.map(i => i.id === id ? { ...i, cantidad: cantidad } : i));
-      };
-
-      const totalCarrito = useMemo(() => {
-        return carrito.reduce((s, p) => s + (parseFloat(p.precio || 0) * (p.cantidad || 1)), 0);
-      }, [carrito]);
-
-      // Verificación por WhatsApp: abrimos WhatsApp con un texto de verificación
-      const abrirVerificacionWhatsApp = () => {
-        const numero = soloNumeroParaWhatsApp(CONFIG.numero_wimpy || DEFAULT_NUMERO_WIMPY);
-        const mensaje = encodeURIComponent(`Verificar mi número para pedidos. Mi teléfono: ${telefono}`);
-        // intentamos esquema whatsapp://, sino wa.me
-        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-        const appLink = `whatsapp://send?phone=${numero}&text=${mensaje}`;
-        const webLink = `https://wa.me/${numero}?text=${mensaje}`;
-        // abrir
-        try {
-          if (isIOS) {
-            window.location.href = appLink;
-            // si no lo abre, se queda en blanco; para fallback abrimos webLink después de delay
-            setTimeout(() => { window.location.href = webLink; }, 1000);
-          } else {
-            // Android/PC
-            window.open(webLink, '_blank');
-          }
-        } catch (e) {
-          window.open(webLink, '_blank');
-        }
-      };
-
-      // Registrar pedido: guarda en Sheets y abre WhatsApp con resumen de pedido
-      const enviarPedido = async () => {
-        if (!telefono) {
-          alert('Ingresa tu número de teléfono');
-          return;
-        }
-        if (carrito.length === 0) {
-          alert('Tu carrito está vacío');
-          return;
-        }
-        setCargando(true);
-        try {
-          // construir detalle
-          const detalle = carrito.map(p => `${p.cantidad} x ${p.nombre}`).join(', ');
-          const total = totalCarrito;
-          // para registrar en Sheets, enviamos carrito serializado y teléfono
-          // asumimos action=registrarPedido implementado en Apps Script
-          const payload = `${encodeURIComponent(JSON.stringify(carrito))}`;
-          const numeroCliente = limpiarTelefono(telefono); // con +
-          const nombreCliente = (clienteValidado && clienteValidado.nombre) ? clienteValidado.nombre : '';
-
-          const url = `${GOOGLE_SHEETS_API}?action=registrarPedido&telefono=${encodeURIComponent(numeroCliente)}&nombre=${encodeURIComponent(nombreCliente)}&pedido=${payload}&total=${encodeURIComponent(total)}&detalle=${encodeURIComponent(detalle)}`;
-
-          const resp = await fetchJSON(url);
-          if (resp && resp.success) {
-            // abrir WhatsApp para confirmación / notificación a Wimpy
-            const numeroW = soloNumeroParaWhatsApp(CONFIG.numero_wimpy || DEFAULT_NUMERO_WIMPY);
-            const mensaje = encodeURIComponent(`Nuevo pedido:\nCliente: ${nombreCliente || telefono}\nTel: ${telefono}\nPedido: ${detalle}\nTotal: $${total.toLocaleString('es-CO')}`);
-            // abrir WA (iOS/Android fallback)
-            const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-            const appLink = `whatsapp://send?phone=${numeroW}&text=${mensaje}`;
-            const webLink = `https://wa.me/${numeroW}?text=${mensaje}`;
-
-            // mostrar vista de éxito y vaciar carrito
-            setCarrito([]);
-            setVista('resultado');
-            setDecisionLocal('pedido_enviado');
-
-            // abrir WA después de 700ms para que el usuario vea el mensaje
-            setTimeout(() => {
-              try {
-                if (isIOS) {
-                  window.location.href = appLink;
-                  setTimeout(() => { window.location.href = webLink; }, 1000);
-                } else {
-                  window.open(webLink, '_blank');
-                }
-              } catch (e) {
-                window.open(webLink, '_blank');
-              }
-            }, 700);
-          } else {
-            alert('Error registrando pedido. Intenta de nuevo.');
-          }
-        } catch (e) {
-          console.error(e);
-          alert('Error de conexión al enviar pedido.');
-        } finally {
-          setCargando(false);
-        }
-      };
-
-      // ============================
-      // VALIDACIÓN DE CLIENTE (igual que antes)
-      // ============================
-      const validarCliente = async () => {
-        if (!telefono.trim()) {
-          alert('Por favor ingresa tu número de teléfono');
-          return;
-        }
-        setCargando(true);
-        try {
-          const telefonoLimpio = limpiarTelefono(telefono); // con +
-          const resp = await fetchJSON(`${GOOGLE_SHEETS_API}?action=validarCliente&telefono=${encodeURIComponent(telefonoLimpio)}`);
-          if (resp && resp.success) {
-            setClienteValidado(resp.cliente);
-            // IR a la pantalla de menú/pedido en lugar de confirmación
-            setVista('menu');
-          } else {
-            setClienteValidado(null);
-            // permitir crear pedido igualmente, pero sugerir registrar
-            if (confirm('Número no registrado. ¿Deseas continuar y hacer un pedido como invitado?')) {
-              setVista('menu');
-            } else {
-              setVista('resultado');
-              setDecisionLocal('no_registrado');
-            }
-          }
-        } catch (e) {
-          console.error(e);
-          alert('Error de conexión. Por favor intenta nuevamente.');
-        } finally {
-          setCargando(false);
-        }
-      };
-
-      // pequeño estado para resultado (mantener compatibilidad)
-      const [decisionLocal, setDecisionLocal] = useState(null);
-
-      // ============================
-      // ADMIN: Clientes (mantener funciones previas)
-      // ============================
-      const agregarCliente = async (nuevo) => {
-        if (!nuevo.telefono || !nuevo.nombre) {
-          alert('Completa teléfono y nombre');
-          return;
-        }
-        setCargando(true);
-        try {
-          const telefonoLimpio = limpiarTelefono(nuevo.telefono);
-          const url = `${GOOGLE_SHEETS_API}?action=agregarCliente&telefono=${encodeURIComponent(telefonoLimpio)}&nombre=${encodeURIComponent(nuevo.nombre)}&email=${encodeURIComponent(nuevo.email || '')}`;
-          const resp = await fetchJSON(url);
-          if (resp && resp.success) {
-            alert('✓ Cliente agregado exitosamente');
-            await cargarDatosIniciales();
-          } else {
-            alert('Error al agregar cliente');
-          }
-        } catch (e) {
-          console.error(e);
-          alert('Error de conexión');
-        } finally { setCargando(false); }
-      };
-
-      const toggleClienteActivo = async (clienteId) => {
-        try {
-          const url = `${GOOGLE_SHEETS_API}?action=toggleClienteActivo&clienteId=${clienteId}`;
-          const resp = await fetchJSON(url);
-          if (resp && resp.success) {
-            await cargarDatosIniciales();
-            setVistaAdmin('clientes');
-          }
-        } catch (e) {
-          console.error(e);
-          alert('Error de conexión');
-        }
-      };
-
-      // ============================
-      // ADMIN: Pedidos -> marcar entregado etc.
-      // (si implementas acciones en Sheets)
-      // ============================
-      const actualizarEstadoPedido = async (pedidoId, nuevoEstado) => {
-        try {
-          const url = `${GOOGLE_SHEETS_API}?action=actualizarEstadoPedido&id=${encodeURIComponent(pedidoId)}&estado=${encodeURIComponent(nuevoEstado)}`;
-          const resp = await fetchJSON(url);
-          if (resp && resp.success) {
-            await cargarDatosIniciales();
-          } else {
-            alert('Error actualizando estado');
-          }
-        } catch (e) {
-          console.error(e);
-          alert('Error de conexión');
-        }
-      };
-
-      // ============================
-      // AUTENTICACIÓN ADMIN
-      // ============================
-      const iniciarSesionAdmin = () => {
-        if (passwordInput === ADMIN_PASSWORD) {
-          setAutenticado(true);
-          setVista('admin');
-          setPasswordInput('');
+      const abrirWA = (num, msg) => {
+        const url = `https://wa.me/${num.replace('+', '')}?text=${encodeURIComponent(msg)}`;
+        if (/iPhone|iPad|iPod|Safari/i.test(navigator.userAgent)) {
+          window.location.href = url;
         } else {
-          alert('❌ Contraseña incorrecta');
+          window.open(url, '_blank');
         }
       };
 
-      const cerrarSesionAdmin = () => {
-        setAutenticado(false);
-        setVista('inicio');
-        setVistaAdmin('dashboard');
-      };
-
-      const reiniciar = () => {
-        setVista('inicio');
-        setTelefono('');
-        setClienteValidado(null);
-        setDecisionLocal(null);
-      };
-
-      // ============================
-      // RENDERS: VISTAS
-      // ============================
-
-      // -- Vista Admin Login
-      if (vista === 'admin' && !autenticado) {
+      // MENU PRINCIPAL
+      if (modo === 'menu') {
         return (
-          <div className="min-h-screen bg-gradient-to-br from-gray-800 via-gray-900 to-black flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
+          <div className="min-h-screen bg-gradient-to-br from-amber-50 to-red-50 flex items-center justify-center p-4">
+            <div className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl p-8">
               <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-red-500 rounded-full mb-4 text-4xl">🔒</div>
-                <h1 className="text-2xl font-bold text-gray-800 mb-2">Acceso Administrador</h1>
-                <p className="text-gray-600">Wimpy Restaurante</p>
+                <div className="text-6xl mb-4">☕</div>
+                <h1 className="text-4xl font-bold text-gray-800 mb-2">Wimpy</h1>
+                <p className="text-orange-600 font-semibold text-lg">Restaurante y Cafetería</p>
               </div>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">🔑 Contraseña</label>
-                  <input
-                    type="password"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && iniciarSesionAdmin()}
-                    placeholder="Ingresa la contraseña"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  />
-                </div>
-                <button onClick={iniciarSesionAdmin} className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg">
-                  Ingresar
+                <button onClick={() => { setModo('pedidos'); setVista('inicio'); }} className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-6 rounded-xl font-bold text-xl hover:scale-105 transition shadow-lg">
+                  <span className="text-3xl">🛒</span> Hacer un Pedido
                 </button>
-                <button onClick={reiniciar} className="w-full text-gray-600 py-2 text-sm hover:text-orange-600 transition-colors">← Volver</button>
+                <button onClick={() => { setModo('entregas'); setVista('inicio'); }} className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-6 rounded-xl font-bold text-xl hover:scale-105 transition shadow-lg">
+                  <span className="text-3xl">📦</span> Confirmar Entrega
+                </button>
+                <button onClick={() => setModo('admin')} className="w-full bg-gradient-to-r from-gray-600 to-gray-700 text-white py-4 rounded-xl font-bold hover:scale-105 transition shadow-lg">
+                  <span className="text-2xl">🔒</span> Panel Administrador
+                </button>
               </div>
             </div>
           </div>
         );
       }
 
-      // -- Admin panel
-      if (vista === 'admin' && autenticado) {
+      // PEDIDOS
+      if (modo === 'pedidos') {
+        if (vista === 'inicio') {
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-50 flex items-center justify-center p-4">
+              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
+                <div className="text-center mb-8">
+                  <div className="text-5xl mb-4">🛒</div>
+                  <h1 className="text-3xl font-bold mb-2">Hacer Pedido</h1>
+                  <p className="text-green-600">Wimpy Restaurante</p>
+                </div>
+                <input type="tel" value={tel} onChange={(e) => setTel(e.target.value)} placeholder="3118336562" className="w-full px-4 py-4 border-2 rounded-xl mb-4" disabled={loading} />
+                <button onClick={async () => {
+                  if (!tel) return alert('Ingresa tu teléfono');
+                  setLoading(true);
+                  try {
+                    const tl = limpiarTel(tel);
+                    const res = await fetch(`${API}?action=validarCliente&telefono=${encodeURIComponent(tl)}`);
+                    const data = await res.json();
+                    if (data.success) {
+                      setCliente(data.cliente);
+                      setVista('catalogo');
+                    } else {
+                      alert('Número no registrado');
+                    }
+                  } catch (e) {
+                    alert('Error de conexión');
+                  }
+                  setLoading(false);
+                }} disabled={!tel || loading} className="w-full bg-green-500 text-white py-4 rounded-xl font-bold mb-2 disabled:opacity-50">
+                  {loading ? '⏳ Validando...' : '🍔 Ver Menú'}
+                </button>
+                <button onClick={() => { setModo('menu'); setTel(''); }} className="w-full text-gray-600">← Volver</button>
+              </div>
+            </div>
+          );
+        }
+
+        if (vista === 'catalogo') {
+          const productosActivos = PRODUCTOS.filter(p => p.activo);
+          const categorias = [...new Set(productosActivos.map(p => p.categoria))];
+          
+          return (
+            <div className="min-h-screen bg-gray-50 p-4">
+              <div className="max-w-4xl mx-auto">
+                <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
+                  <h2 className="text-2xl font-bold mb-2">Hola {cliente.nombre}! 👋</h2>
+                  <p className="text-gray-600">Selecciona tus productos</p>
+                </div>
+
+                {categorias.map(cat => (
+                  <div key={cat} className="mb-6">
+                    <h3 className="text-xl font-bold text-gray-800 mb-3">{cat}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {productosActivos.filter(p => p.categoria === cat).map(p => (
+                        <div key={p.id} className="bg-white rounded-xl shadow p-4 hover:shadow-lg transition">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-bold text-lg">{p.nombre}</h4>
+                            <span className="text-xl font-bold text-green-600">${p.precio.toLocaleString()}</span>
+                          </div>
+                          <button onClick={() => {
+                            const existe = carrito.find(i => i.id === p.id);
+                            if (existe) {
+                              setCarrito(carrito.map(i => i.id === p.id ? {...i, cantidad: i.cantidad + 1} : i));
+                            } else {
+                              setCarrito([...carrito, {...p, cantidad: 1}]);
+                            }
+                          }} className="w-full bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600">
+                            + Agregar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {carrito.length > 0 && (
+                  <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4">
+                    <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">{carrito.reduce((s, i) => s + i.cantidad, 0)} productos</p>
+                        <p className="text-2xl font-bold text-green-600">${carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0).toLocaleString()}</p>
+                      </div>
+                      <button onClick={() => setVista('carrito')} className="bg-green-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-600">
+                        Ver Carrito →
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <button onClick={() => { setVista('inicio'); setCarrito([]); setCliente(null); }} className="mt-4 text-gray-600">← Volver</button>
+              </div>
+            </div>
+          );
+        }
+
+        if (vista === 'carrito') {
+          const total = carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0);
+          
+          return (
+            <div className="min-h-screen bg-gray-50 p-4">
+              <div className="max-w-2xl mx-auto">
+                <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
+                  <h2 className="text-2xl font-bold mb-4">Tu Carrito 🛒</h2>
+                  <div className="space-y-3">
+                    {carrito.map(item => (
+                      <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <p className="font-semibold">{item.nombre}</p>
+                          <p className="text-sm text-gray-600">${item.precio.toLocaleString()} c/u</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => {
+                            if (item.cantidad > 1) {
+                              setCarrito(carrito.map(i => i.id === item.id ? {...i, cantidad: i.cantidad - 1} : i));
+                            } else {
+                              setCarrito(carrito.filter(i => i.id !== item.id));
+                            }
+                          }} className="w-8 h-8 bg-red-500 text-white rounded-full font-bold">-</button>
+                          <span className="font-bold text-lg w-8 text-center">{item.cantidad}</span>
+                          <button onClick={() => {
+                            setCarrito(carrito.map(i => i.id === item.id ? {...i, cantidad: i.cantidad + 1} : i));
+                          }} className="w-8 h-8 bg-green-500 text-white rounded-full font-bold">+</button>
+                          <span className="font-bold text-lg w-24 text-right">${(item.precio * item.cantidad).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t mt-4 pt-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xl font-bold">TOTAL:</span>
+                      <span className="text-3xl font-bold text-green-600">${total.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button onClick={() => {
+                  if (carrito.length === 0) return alert('Carrito vacío');
+                  const codigo = genOTP();
+                  setOtpGen(codigo);
+                  const msg = `🔐 Código de verificación Wimpy: ${codigo}\n\nUsa este código para confirmar tu pedido.`;
+                  abrirWA(cliente.telefono, msg);
+                  setVista('verificacion');
+                }} className="w-full bg-green-500 text-white py-4 rounded-xl font-bold text-lg mb-2">
+                  Confirmar Pedido →
+                </button>
+                <button onClick={() => setVista('catalogo')} className="w-full text-gray-600">← Seguir comprando</button>
+              </div>
+            </div>
+          );
+        }
+
+        if (vista === 'verificacion') {
+          return (
+            <div className="min-h-screen bg-blue-50 flex items-center justify-center p-4">
+              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
+                <div className="text-center mb-6">
+                  <div className="text-5xl mb-4">🔐</div>
+                  <h2 className="text-2xl font-bold mb-2">Verificación</h2>
+                  <p className="text-gray-600">Ingresa el código enviado a tu WhatsApp</p>
+                </div>
+                <input type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="1234" maxLength="4" className="w-full px-4 py-4 border-2 rounded-xl mb-4 text-center text-2xl font-bold" />
+                <button onClick={async () => {
+                  if (otp !== otpGen) return alert('❌ Código incorrecto');
+                  
+                  const detalle = carrito.map(i => `• ${i.cantidad}x ${i.nombre} - $${(i.precio * i.cantidad).toLocaleString()}`).join('\n');
+                  const total = carrito.reduce((s, i) => s + (i.precio * i.cantidad), 0);
+                  const msgPedido = `🍔 *NUEVO PEDIDO - WIMPY*\n\n👤 Cliente: ${cliente.nombre}\n📱 Teléfono: ${cliente.telefono}\n\n📦 PEDIDO:\n${detalle}\n\n💰 TOTAL: $${total.toLocaleString()}`;
+                  
+                  // Registrar en Sheets
+                  try {
+                    const productosJSON = JSON.stringify(carrito);
+                    await fetch(`${API}?action=registrarPedido&clienteId=${cliente.id}&telefono=${encodeURIComponent(cliente.telefono)}&nombre=${encodeURIComponent(cliente.nombre)}&productos=${encodeURIComponent(productosJSON)}&total=${total}`);
+                  } catch (e) {}
+                  
+                  abrirWA(config.numeroWimpy, msgPedido);
+                  setVista('confirmado');
+                }} className="w-full bg-green-500 text-white py-4 rounded-xl font-bold mb-2">
+                  ✓ Verificar y Enviar
+                </button>
+                <button onClick={() => setVista('carrito')} className="w-full text-gray-600">← Volver</button>
+              </div>
+            </div>
+          );
+        }
+
+        if (vista === 'confirmado') {
+          return (
+            <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
+              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center">
+                <div className="text-6xl mb-4 animate-bounce">✅</div>
+                <h2 className="text-3xl font-bold mb-2">¡Pedido Confirmado!</h2>
+                <p className="text-gray-600 mb-6">Tu pedido ha sido enviado a Wimpy exitosamente</p>
+                <button onClick={() => { setModo('menu'); setVista('inicio'); setTel(''); setCliente(null); setCarrito([]); setOtp(''); }} className="w-full bg-green-500 text-white py-4 rounded-xl font-bold">
+                  Finalizar
+                </button>
+              </div>
+            </div>
+          );
+        }
+      }
+
+      // ENTREGAS (igual que antes pero más compacto)
+      if (modo === 'entregas') {
+        if (vista === 'inicio') {
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
+                <div className="text-center mb-8">
+                  <div className="text-5xl mb-4">📦</div>
+                  <h1 className="text-3xl font-bold mb-2">Confirmar Entrega</h1>
+                </div>
+                <input type="tel" value={tel} onChange={(e) => setTel(e.target.value)} placeholder="3118336562" className="w-full px-4 py-4 border-2 rounded-xl mb-4" />
+                <button onClick={async () => {
+                  if (!tel) return;
+                  setLoading(true);
+                  try {
+                    const tl = limpiarTel(tel);
+                    const res = await fetch(`${API}?action=validarCliente&telefono=${encodeURIComponent(tl)}`);
+                    const data = await res.json();
+                    if (data.success) {
+                      setCliente(data.cliente);
+                      setVista('confirmar');
+                    } else {
+                      setDecision('no_registrado');
+                      setVista('resultado');
+                    }
+                  } catch (e) {}
+                  setLoading(false);
+                }} className="w-full bg-blue-500 text-white py-4 rounded-xl font-bold mb-2">
+                  Continuar
+                </button>
+                <button onClick={() => { setModo('menu'); setTel(''); }} className="w-full text-gray-600">← Volver</button>
+              </div>
+            </div>
+          );
+        }
+
+        if (vista === 'confirmar') {
+          return (
+            <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
+              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
+                <div className="text-center mb-6">
+                  <div className="text-5xl mb-4">📦</div>
+                  <h2 className="text-2xl font-bold mb-2">Hola {cliente.nombre}!</h2>
+                  <p className="text-gray-600">¿Recibiste tu pedido?</p>
+                </div>
+                <div className="space-y-3">
+                  <button onClick={async () => {
+                    setLoading(true);
+                    try {
+                      await fetch(`${API}?action=registrarDecision&telefono=${encodeURIComponent(cliente.telefono)}&nombre=${encodeURIComponent(cliente.nombre)}&clienteId=${cliente.id}&decision=aceptado`);
+                      setDecision('aceptado');
+                      setVista('resultado');
+                      const msg = `Yo ${cliente.nombre} he recibido mi Almuerzo, muchas gracias Wimpy`;
+                      setTimeout(() => abrirWA(config.numeroWimpy, msg), 1000);
+                    } catch (e) {}
+                    setLoading(false);
+                  }} className="w-full bg-green-500 text-white py-5 rounded-xl font-bold text-lg">
+                    ✅ Sí, recibí mi pedido
+                  </button>
+                  <button onClick={async () => {
+                    setLoading(true);
+                    try {
+                      await fetch(`${API}?action=registrarDecision&telefono=${encodeURIComponent(cliente.telefono)}&nombre=${encodeURIComponent(cliente.nombre)}&clienteId=${cliente.id}&decision=cancelado`);
+                      setDecision('cancelado');
+                      setVista('resultado');
+                      const msg = `Yo ${cliente.nombre} NO he recibido mi Almuerzo. Por favor contactarme.`;
+                      setTimeout(() => abrirWA(config.numeroWimpy, msg), 1000);
+                    } catch (e) {}
+                    setLoading(false);
+                  }} className="w-full bg-red-500 text-white py-5 rounded-xl font-bold text-lg">
+                    ❌ No recibí mi pedido
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        if (vista === 'resultado') {
+          const ok = decision === 'aceptado';
+          return (
+            <div className={`min-h-screen ${ok ? 'bg-green-50' : 'bg-red-50'} flex items-center justify-center p-4`}>
+              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center">
+                <div className="text-6xl mb-4 animate-bounce">{ok ? '✅' : (decision === 'no_registrado' ? '⚠️' : '❌')}</div>
+                <h2 className="text-3xl font-bold mb-2">{ok ? '¡Perfecto!' : (decision === 'no_registrado' ? 'No Registrado' : 'Entrega Cancelada')}</h2>
+                <p className="text-gray-600 mb-6">{ok ? 'Gracias por confirmar' : (decision === 'no_registrado' ? 'Contacta a Wimpy para registrarte' : 'Wimpy se pondrá en contacto')}</p>
+                <button onClick={() => { setModo('menu'); setVista('inicio'); setTel(''); setCliente(null); setDecision(null); }} className="w-full bg-blue-500 text-white py-4 rounded-xl font-bold">
+                  Finalizar
+                </button>
+              </div>
+            </div>
+          );
+        }
+      }
+
+      // ADMIN (simplificado pero funcional)
+      if (modo === 'admin') {
+        if (!auth) {
+          return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+              <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
+                <div className="text-center mb-8">
+                  <div className="text-5xl mb-4">🔒</div>
+                  <h1 className="text-2xl font-bold">Admin</h1>
+                </div>
+                <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && (pass === ADMIN_PASS ? (setAuth(true), setPass('')) : alert('Contraseña incorrecta'))} placeholder="Contraseña" className="w-full px-4 py-3 border-2 rounded-xl mb-4" />
+                <button onClick={() => pass === ADMIN_PASS ? (setAuth(true), setPass('')) : alert('Contraseña incorrecta')} className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold mb-2">
+                  Ingresar
+                </button>
+                <button onClick={() => { setModo('menu'); setPass(''); }} className="w-full text-gray-600">← Volver</button>
+              </div>
+            </div>
+          );
+        }
+
+        // Panel Admin
         return (
           <div className="min-h-screen bg-gray-50">
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 shadow-lg">
-              <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">☕</span>
-                  <div>
-                    <h1 className="text-xl font-bold">Wimpy - Admin</h1>
-                    <p className="text-xs opacity-90">Panel de Control</p>
-                  </div>
-                </div>
-                <button onClick={cerrarSesionAdmin} className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-all">🚪 Cerrar Sesión</button>
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4">
+              <div className="max-w-7xl mx-auto flex justify-between items-center">
+                <h1 className="text-xl font-bold">Wimpy Admin</h1>
+                <button onClick={() => { setAuth(false); setModo('menu'); }} className="px-4 py-2 bg-white bg-opacity-20 rounded-lg">
+                  Salir
+                </button>
               </div>
             </div>
-
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-              <div className="max-w-7xl mx-auto px-4">
-                <div className="flex gap-2 overflow-x-auto py-2">
-                  <button onClick={() => setVistaAdmin('dashboard')} className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${vistaAdmin === 'dashboard' ? 'bg-orange-100 text-orange-700' : 'text-gray-600 hover:bg-gray-100'}`}>📊 Dashboard</button>
-                  <button onClick={() => setVistaAdmin('configuracion')} className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${vistaAdmin === 'configuracion' ? 'bg-orange-100 text-orange-700' : 'text-gray-600 hover:bg-gray-100'}`}>⚙️ Configuración</button>
-                  <button onClick={() => setVistaAdmin('clientes')} className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${vistaAdmin === 'clientes' ? 'bg-orange-100 text-orange-700' : 'text-gray-600 hover:bg-gray-100'}`}>👥 Clientes</button>
-                  <button onClick={() => setVistaAdmin('productos')} className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${vistaAdmin === 'productos' ? 'bg-orange-100 text-orange-700' : 'text-gray-600 hover:bg-gray-100'}`}>🍔 Productos</button>
-                  <button onClick={() => setVistaAdmin('pedidos')} className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${vistaAdmin === 'pedidos' ? 'bg-orange-100 text-orange-700' : 'text-gray-600 hover:bg-gray-100'}`}>📋 Pedidos</button>
-                  <button onClick={() => setVistaAdmin('reportes')} className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${vistaAdmin === 'reportes' ? 'bg-orange-100 text-orange-700' : 'text-gray-600 hover:bg-gray-100'}`}>📈 Reportes</button>
-                  <button onClick={() => setVistaAdmin('factura')} className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${vistaAdmin === 'factura' ? 'bg-orange-100 text-orange-700' : 'text-gray-600 hover:bg-gray-100'}`}>💰 Cuenta de Cobro</button>
-                </div>
-              </div>
-            </div>
-
+            
             <div className="max-w-7xl mx-auto p-4">
-              {vistaAdmin === 'configuracion' && (
-                <div className="space-y-6">
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">⚙️ Configuración del Sistema</h2>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                      <h3 className="font-bold text-blue-800 mb-2">📱 Número de WhatsApp de Wimpy</h3>
-                      <p className="text-sm text-blue-700 mb-4">Este es el número al que llegarán los mensajes de confirmación y pedidos.</p>
+              <div className="flex gap-2 mb-4 overflow-x-auto">
+                {['dashboard', 'config', 'productos', 'clientes', 'pedidos', 'entregas'].map(v => (
+                  <button key={v} onClick={() => setAdminVista(v)} className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${adminVista === v ? 'bg-orange-100 text-orange-700' : 'bg-white text-gray-600'}`}>
+                    {v === 'dashboard' && '📊 Dashboard'}
+                    {v === 'config' && '⚙️ Config'}
+                    {v === 'productos' && '🍔 Productos'}
+                    {v === 'clientes' && '👥 Clientes'}
+                    {v === 'pedidos' && '🛒 Pedidos'}
+                    {v === 'entregas' && '📦 Entregas'}
+                  </button>
+                ))}
+              </div>
 
+              {adminVista === 'dashboard' && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Clientes</p><p className="text-3xl font-bold text-blue-600">{CLIENTES.length}</p></div>
+                  <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Productos</p><p className="text-3xl font-bold text-green-600">{PRODUCTOS.length}</p></div>
+                  <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Pedidos</p><p className="text-3xl font-bold text-orange-600">{PEDIDOS.length}</p></div>
+                  <div className="bg-white rounded-xl p-6 shadow"><p className="text-sm text-gray-600 mb-2">Entregas</p><p className="text-3xl font-bold text-purple-600">{HISTORIAL.length}</p></div>
+                </div>
+              )}
+
+              {adminVista === 'config' && (
+                <div className="bg-white rounded-xl p-6 shadow">
+                  <h2 className="text-xl font-bold mb-4">⚙️ Configuración</h2>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 className="font-bold text-blue-800 mb-3">📱 Número de WhatsApp de Wimpy</h3>
+                    {editandoConfig ? (
                       <div className="space-y-3">
-                        <input
-                          type="text"
-                          value={CONFIG.numero_wimpy || ''}
-                          onChange={(e) => setCONFIG({...CONFIG, numero_wimpy: e.target.value})}
-                          placeholder="3118336562"
-                          className="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-lg"
-                        />
+                        <input type="tel" value={config.numeroWimpy} onChange={(e) => setConfig({...config, numeroWimpy: e.target.value})} placeholder="573118336562" className="w-full px-4 py-3 border-2 rounded-lg text-lg" />
                         <div className="flex gap-2">
-                          <button onClick={guardarNumeroWimpy} disabled={cargando} className="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600">✓ Guardar</button>
-                          <button onClick={() => { cargarDatosIniciales(); }} className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400">Revertir</button>
+                          <button onClick={async () => {
+                            const num = config.numeroWimpy.replace(/\s+/g, '').replace(/-/g, '').replace(/\+/g, '');
+                            const final = num.startsWith('57') ? num : '57' + num;
+                            try {
+                              await fetch(`${API}?action=guardarConfiguracion&numeroWimpy=${final}`);
+                              setConfig({numeroWimpy: final});
+                              CONFIG = {numeroWimpy: final};
+                              setEditandoConfig(false);
+                              alert('✓ Guardado');
+                            } catch (e) {
+                              alert('Error al guardar');
+                            }
+                          }} className="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold">✓ Guardar</button>
+                          <button onClick={() => { setConfig(CONFIG); setEditandoConfig(false); }} className="px-6 py-2 bg-gray-300 rounded-lg font-semibold">Cancelar</button>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <h3 className="font-bold text-yellow-800 mb-2">⚠️ Importante</h3>
-                      <ul className="text-sm text-yellow-700 space-y-1">
-                        <li>• Todos los cambios de configuración se guardan en Google Sheets.</li>
-                        <li>• El número se usa para abrir WhatsApp desde el cliente.</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {vistaAdmin === 'productos' && (
-                <div className="space-y-6">
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><span>➕</span> Agregar / Editar Producto</h2>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <input type="text" placeholder="Nombre del producto" value={nuevoProducto.nombre} onChange={(e) => setNuevoProducto({...nuevoProducto, nombre: e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
-                      <input type="number" placeholder="Precio" value={nuevoProducto.precio} onChange={(e) => setNuevoProducto({...nuevoProducto, precio: e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500" />
-                    </div>
-
-                    <div className="flex gap-2">
-                      {editProductoId ? (
-                        <>
-                          <button onClick={guardarEdicionProducto} disabled={cargando} className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">💾 Guardar cambios</button>
-                          <button onClick={() => { setEditProductoId(null); setNuevoProducto({nombre:'',precio:''}); }} className="px-6 py-3 bg-gray-300 rounded-lg">Cancelar</button>
-                        </>
-                      ) : (
-                        <button onClick={agregarProducto} disabled={cargando} className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-semibold hover:from-green-600">+ Agregar Producto</button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Productos Registrados ({PRODUCTOS_DB.length})</h2>
-
-                    {cargandoDatos ? (
-                      <div className="text-center py-8"><p className="text-gray-500">Cargando productos...</p></div>
                     ) : (
-                      <div className="space-y-2">
-                        {PRODUCTOS_DB.map((p) => (
-                          <div key={p.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                            <div>
-                              <p className="font-semibold text-gray-800">{p.nombre}</p>
-                              <p className="text-sm text-gray-500">${Number(p.precio).toLocaleString('es-CO')}</p>
-                            </div>
-                            <div className="flex gap-2">
-                              <button onClick={() => iniciarEdicionProducto(p)} className="px-3 py-1 bg-blue-500 text-white rounded-lg">✏️</button>
-                              <button onClick={() => eliminarProducto(p.id)} className="px-3 py-1 bg-red-500 text-white rounded-lg">🗑️</button>
-                            </div>
-                          </div>
-                        ))}
+                      <div className="flex justify-between items-center">
+                        <div><p className="text-2xl font-bold">+{config.numeroWimpy}</p><p className="text-xs text-gray-500">Número actual</p></div>
+                        <button onClick={() => setEditandoConfig(true)} className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold">✏️ Editar</button>
                       </div>
                     )}
                   </div>
                 </div>
               )}
 
-              {vistaAdmin === 'pedidos' && (
-                <div className="space-y-6">
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">📋 Pedidos</h2>
-                    {PEDIDOS_DB.length === 0 ? (
-                      <div className="text-center py-8"><p className="text-gray-500">No hay pedidos registrados</p></div>
-                    ) : (
-                      <div className="space-y-3">
-                        {PEDIDOS_DB.slice().reverse().map(p => (
-                          <div key={p.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-start justify-between">
-                            <div className="flex-1">
-                              <p className="font-semibold text-gray-800">Cliente: {p.nombre || p.telefono}</p>
-                              <p className="text-sm text-gray-600">Tel: {p.telefono}</p>
-                              <p className="text-sm text-gray-700 mt-2">Pedido: {p.detalle}</p>
-                              <p className="text-sm text-gray-600 mt-1">Total: ${Number(p.total).toLocaleString('es-CO')}</p>
-                              <p className="text-xs text-gray-500 mt-1">Fecha: {p.fecha || ''} {p.hora || ''}</p>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                              <select value={p.estado || 'pendiente'} onChange={(e) => actualizarEstadoPedido(p.id, e.target.value)} className="px-3 py-2 border rounded-lg">
-                                <option value="pendiente">Pendiente</option>
-                                <option value="en_preparacion">En preparación</option>
-                                <option value="enviado">Enviado</option>
-                                <option value="entregado">Entregado</option>
+              {adminVista === 'productos' && (
+                <div className="space-y-4">
+                  <div className="bg-white rounded-xl p-6 shadow">
+                    <h2 className="text-xl font-bold mb-4">➕ Agregar Producto</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <input type="text" value={nuevoP.nombre} onChange={(e) => setNuevoP({...nuevoP, nombre: e.target.value})} placeholder="Nombre" className="px-4 py-3 border rounded-lg" />
+                      <input type="number" value={nuevoP.precio} onChange={(e) => setNuevoP({...nuevoP, precio: e.target.value})} placeholder="Precio" className="px-4 py-3 border rounded-lg" />
+                      <select value={nuevoP.categoria} onChange={(e) => setNuevoP({...nuevoP, categoria: e.target.value})} className="px-4 py-3 border rounded-lg">
+                        <option>Almuerzos</option>
+                        <option>Bebidas</option>
+                        <option>Postres</option>
+                      </select>
+                      <button onClick={async () => {
+                        if (!nuevoP.nombre || !nuevoP.precio) return alert('Completa los campos');
+                        try {
+                          await fetch(`${API}?action=agregarProducto&nombre=${encodeURIComponent(nuevoP.nombre)}&precio=${nuevoP.precio}&categoria=${encodeURIComponent(nuevoP.categoria)}`);
+                          await cargarDatos();
+                          setNuevoP({nombre: '', precio: '', categoria: 'Almuerzos'});
+                          alert('✓ Agregado');
+                        } catch (e) {}
+                      }} className="bg-green-500 text-white py-3 rounded-lg font-bold">+ Agregar</button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-6 shadow">
+                    <h2 className="text-xl font-bold mb-4">Lista de Productos</h2>
+                    <div className="space-y-2">
+                      {PRODUCTOS.map(p => (
+                        <div key={p.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          {editP && editP.id === p.id ? (
+                            <div className="flex-1 flex gap-2">
+                              <input type="text" value={editP.nombre} onChange={(e) => setEditP({...editP, nombre: e.target.value})} className="flex-1 px-3 py-2 border rounded" />
+                              <input type="number" value={editP.precio} onChange={(e) => setEditP({...editP, precio: e.target.value})} className="w-32 px-3 py-2 border rounded" />
+                              <select value={editP.categoria} onChange={(e) => setEditP({...editP, categoria: e.target.value})} className="px-3 py-2 border rounded">
+                                <option>Almuerzos</option>
+                                <option>Bebidas</option>
+                                <option>Postres</option>
                               </select>
-                              <button onClick={() => window.open(`https://wa.me/${soloNumeroParaWhatsApp(CONFIG.numero_wimpy || DEFAULT_NUMERO_WIMPY)}?text=${encodeURIComponent('Detalle pedido: ' + p.detalle + ' - Cliente: ' + (p.nombre || p.telefono))}`, '_blank')} className="px-3 py-2 bg-orange-500 text-white rounded-lg">Abrir en WhatsApp</button>
+                              <button onClick={async () => {
+                                try {
+                                  await fetch(`${API}?action=actualizarProducto&productoId=${editP.id}&nombre=${encodeURIComponent(editP.nombre)}&precio=${editP.precio}&categoria=${encodeURIComponent(editP.categoria)}`);
+                                  await cargarDatos();
+                                  setEditP(null);
+                                  alert('✓ Actualizado');
+                                } catch (e) {}
+                              }} className="px-4 py-2 bg-green-500 text-white rounded font-semibold">✓</button>
+                              <button onClick={() => setEditP(null)} className="px-4 py-2 bg-gray-300 rounded font-semibold">✗</button>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Mantengo dashboard, clientes, reportes y factura (similar al original). */}
-              {vistaAdmin === 'dashboard' && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-white rounded-xl p-5 shadow-md border border-gray-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-gray-600 font-semibold">Total Entregas</p>
-                        <span className="text-3xl">📦</span>
-                      </div>
-                      <p className="text-3xl font-bold text-blue-700">{HISTORIAL.length}</p>
-                    </div>
-                    <div className="bg-white rounded-xl p-5 shadow-md border border-gray-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-gray-600 font-semibold">Pedidos</p>
-                        <span className="text-3xl">🧾</span>
-                      </div>
-                      <p className="text-3xl font-bold text-green-700">{PEDIDOS_DB.length}</p>
-                    </div>
-                    <div className="bg-white rounded-xl p-5 shadow-md border border-gray-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-gray-600 font-semibold">Productos</p>
-                        <span className="text-3xl">🍔</span>
-                      </div>
-                      <p className="text-3xl font-bold text-orange-700">{PRODUCTOS_DB.length}</p>
-                    </div>
-                    <div className="bg-white rounded-xl p-5 shadow-md border border-gray-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-gray-600 font-semibold">Clientes</p>
-                        <span className="text-3xl">👥</span>
-                      </div>
-                      <p className="text-3xl font-bold text-indigo-700">{CLIENTES_DB.length}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {vistaAdmin === 'clientes' && (
-                <div className="space-y-6">
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">➕ Agregar Nuevo Cliente</h2>
-                    <AgregarClienteForm onAdd={agregarCliente} />
-                  </div>
-
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Clientes Registrados ({CLIENTES_DB.length})</h2>
-                    {cargandoDatos ? (
-                      <div className="text-center py-8"><p className="text-gray-500">Cargando clientes...</p></div>
-                    ) : (
-                      <div className="space-y-2">
-                        {CLIENTES_DB.map((cliente) => (
-                          <div key={cliente.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100">
-                            <div>
-                              <p className="font-semibold text-gray-800">{cliente.nombre}</p>
-                              <p className="text-sm text-gray-600">{cliente.telefono}</p>
-                              {cliente.email && <p className="text-xs text-gray-500">{cliente.email}</p>}
-                            </div>
-                            <button onClick={() => toggleClienteActivo(cliente.id)} className={`px-4 py-2 rounded-lg font-semibold text-sm ${cliente.activo ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>{cliente.activo ? '✓ Activo' : '✗ Inactivo'}</button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {vistaAdmin === 'reportes' && (
-                <div className="space-y-6">
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Filtros de Búsqueda</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Mes</label>
-                        <select value={filtroMes} onChange={(e) => setFiltroMes(parseInt(e.target.value))} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500">
-                          {Array.from({length:12},(_,i)=> <option key={i} value={i}>{nombreMes(i)}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Año</label>
-                        <select value={filtroAnio} onChange={(e) => setFiltroAnio(parseInt(e.target.value))} className="w-full px-4 py-3 border border-gray-300 rounded-lg">
-                          <option value={2024}>2024</option><option value={2025}>2025</option><option value={2026}>2026</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Cliente</label>
-                        <select value={filtroCliente} onChange={(e) => setFiltroCliente(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg">
-                          <option value="todos">Todos los clientes</option>
-                          {CLIENTES_DB.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl shadow-md p-6 text-white">
-                    <h3 className="text-2xl font-bold mb-2">{nombreMes(filtroMes)} {filtroAnio}</h3>
-                    <p className="text-3xl font-bold">{HISTORIAL.filter(h => h.mes === filtroMes && h.anio === filtroAnio && h.decision === 'aceptado').length} almuerzos entregados</p>
-                    <p className="text-sm opacity-90 mt-2">Solo almuerzos aceptados (no se cuentan cancelados)</p>
-                  </div>
-                </div>
-              )}
-
-              {vistaAdmin === 'factura' && (
-                <div className="space-y-6">
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Generar Cuenta de Cobro</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      <div><label className="block text-sm font-semibold text-gray-700 mb-2">#️⃣ Número de Cuenta de Cobro</label><input type="text" value={datosFactura.numeroFactura} onChange={(e) => setDatosFactura({...datosFactura, numeroFactura: e.target.value})} className="w-full px-4 py-3 border border-gray-300 rounded-lg"/></div>
-                      <div><label className="block text-sm font-semibold text-gray-700 mb-2">🏢 Empresa Cliente</label><input type="text" value={datosFactura.empresaCliente} onChange={(e) => setDatosFactura({...datosFactura, empresaCliente: e.target.value})} className="w-full px-4 py-3 border border-gray-300 rounded-lg"/></div>
-                      <div><label className="block text-sm font-semibold text-gray-700 mb-2">📅 Mes de Cobro</label><select value={datosFactura.mesFactura} onChange={(e)=> setDatosFactura({...datosFactura, mesFactura: parseInt(e.target.value)})} className="w-full px-4 py-3 border border-gray-300 rounded-lg">{Array.from({length:12},(_,i)=> <option key={i} value={i}>{nombreMes(i)}</option>)}</select></div>
-                      <div><label className="block text-sm font-semibold text-gray-700 mb-2">📅 Año de Cobro</label><select value={datosFactura.anioFactura} onChange={(e)=> setDatosFactura({...datosFactura, anioFactura: parseInt(e.target.value)})} className="w-full px-4 py-3 border border-gray-300 rounded-lg"><option value={2024}>2024</option><option value={2025}>2025</option><option value={2026}>2026</option></select></div>
-                      <div><label className="block text-sm font-semibold text-gray-700 mb-2">💵 Valor por Almuerzo (COP)</label><input type="number" value={datosFactura.valorAlmuerzo} onChange={(e)=> setDatosFactura({...datosFactura, valorAlmuerzo: e.target.value})} className="w-full px-4 py-3 border border-gray-300 rounded-lg"/></div>
-                      <div><label className="block text-sm font-semibold text-gray-700 mb-2">📅 Fecha de Emisión</label><input type="date" value={datosFactura.fechaEmision} onChange={(e)=> setDatosFactura({...datosFactura, fechaEmision: e.target.value})} className="w-full px-4 py-3 border border-gray-300 rounded-lg"/></div>
-                    </div>
-                    <button onClick={() => { if(!datosFactura.numeroFactura||!datosFactura.empresaCliente||!datosFactura.valorAlmuerzo){alert('Por favor completa todos los campos requeridos'); return;} window.print(); }} className="w-full md:w-auto px-8 py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold">🖨️ Generar e Imprimir</button>
-                  </div>
-
-                  {datosFactura.numeroFactura && datosFactura.empresaCliente && datosFactura.valorAlmuerzo && (
-                    <div id="cuenta-cobro" className="bg-white rounded-xl shadow-2xl p-8 border-2 border-gray-300">
-                      {/* contenido de cuenta de cobro similar al original */}
-                      <div className="text-center mb-8 pb-6 border-b-2 border-orange-500">
-                        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-red-500 rounded-full mb-4 text-4xl">☕</div>
-                        <h1 className="text-3xl font-bold text-gray-800 mb-1">Wimpy</h1>
-                        <p className="text-lg text-orange-600 font-semibold">Restaurante y Cafetería</p>
-                      </div>
-                      <div className="text-center mb-8">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2">CUENTA DE COBRO</h2>
-                        <p className="text-lg text-gray-600">No. {datosFactura.numeroFactura}</p>
-                        <p className="text-sm text-gray-500">Fecha: {new Date(datosFactura.fechaEmision).toLocaleDateString('es-CO', {day:'2-digit', month:'long', year:'numeric'})}</p>
-                      </div>
-                      <div className="mb-8 bg-gray-50 rounded-lg p-6">
-                        <h3 className="font-bold text-gray-800 mb-3 text-lg">CLIENTE:</h3>
-                        <p className="text-xl font-semibold text-gray-800">{datosFactura.empresaCliente}</p>
-                      </div>
-                      <div className="mb-8">
-                        <h3 className="font-bold text-gray-800 mb-4 text-lg">DETALLE DEL SERVICIO:</h3>
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="bg-orange-100">
-                              <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-800">Descripción</th>
-                              <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-800">Cantidad</th>
-                              <th className="border border-gray-300 px-4 py-3 text-right font-semibold text-gray-800">Valor Unit.</th>
-                              <th className="border border-gray-300 px-4 py-3 text-right font-semibold text-gray-800">Total</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(() => {
-                              const entregas = HISTORIAL.filter(h => h.mes === datosFactura.mesFactura && h.anio === datosFactura.anioFactura && h.decision === 'aceptado');
-                              const cantidad = entregas.length;
-                              const valorUnit = parseFloat(datosFactura.valorAlmuerzo) || 0;
-                              const total = cantidad * valorUnit;
-                              return (
-                                <tr>
-                                  <td className="border border-gray-300 px-4 py-3">
-                                    <p className="font-semibold">Servicio de Almuerzos</p>
-                                    <p className="text-sm text-gray-600">Período: {nombreMes(datosFactura.mesFactura)} {datosFactura.anioFactura}</p>
-                                  </td>
-                                  <td className="border border-gray-300 px-4 py-3 text-center text-lg font-bold">{cantidad}</td>
-                                  <td className="border border-gray-300 px-4 py-3 text-right">${valorUnit.toLocaleString('es-CO')}</td>
-                                  <td className="border border-gray-300 px-4 py-3 text-right text-lg font-bold text-orange-600">${total.toLocaleString('es-CO')}</td>
-                                </tr>
-                              );
-                            })()}
-                          </tbody>
-                        </table>
-                      </div>
-                      <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg p-6 mb-8">
-                        <div className="flex items-center justify-between">
-                          <span className="text-2xl font-bold">TOTAL A PAGAR:</span>
-                          <span className="text-4xl font-bold">${(() => {
-                            const entregas = HISTORIAL.filter(h => h.mes === datosFactura.mesFactura && h.anio === datosFactura.anioFactura && h.decision === 'aceptado');
-                            const cantidad = entregas.length;
-                            const valorUnit = parseFloat(datosFactura.valorAlmuerzo) || 0;
-                            return (cantidad * valorUnit).toLocaleString('es-CO');
-                          })()}</span>
+                          ) : (
+                            <>
+                              <div className="flex-1">
+                                <p className="font-bold">{p.nombre}</p>
+                                <p className="text-sm text-gray-600">${p.precio.toLocaleString()} - {p.categoria}</p>
+                              </div>
+                              <div className="flex gap-2">
+                                <button onClick={async () => {
+                                  try {
+                                    await fetch(`${API}?action=toggleProductoActivo&productoId=${p.id}`);
+                                    await cargarDatos();
+                                  } catch (e) {}
+                                }} className={`px-3 py-1 rounded text-sm font-semibold ${p.activo ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                                  {p.activo ? '✓ Activo' : '✗ Inactivo'}
+                                </button>
+                                <button onClick={() => setEditP(p)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm font-semibold">✏️</button>
+                                <button onClick={async () => {
+                                  if (confirm('¿Eliminar?')) {
+                                    try {
+                                      await fetch(`${API}?action=eliminarProducto&productoId=${p.id}`);
+                                      await cargarDatos();
+                                      alert('✓ Eliminado');
+                                    } catch (e) {}
+                                  }
+                                }} className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm font-semibold">🗑️</button>
+                              </div>
+                            </>
+                          )}
                         </div>
-                      </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {adminVista === 'clientes' && (
+                <div className="space-y-4">
+                  <div className="bg-white rounded-xl p-6 shadow">
+                    <h2 className="text-xl font-bold mb-4">➕ Agregar Cliente</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <input type="tel" value={nuevoC.telefono} onChange={(e) => setNuevoC({...nuevoC, telefono: e.target.value})} placeholder="Teléfono" className="px-4 py-3 border rounded-lg" />
+                      <input type="text" value={nuevoC.nombre} onChange={(e) => setNuevoC({...nuevoC, nombre: e.target.value})} placeholder="Nombre" className="px-4 py-3 border rounded-lg" />
+                      <input type="email" value={nuevoC.email} onChange={(e) => setNuevoC({...nuevoC, email: e.target.value})} placeholder="Email" className="px-4 py-3 border rounded-lg" />
+                      <button onClick={async () => {
+                        if (!nuevoC.telefono || !nuevoC.nombre) return alert('Completa teléfono y nombre');
+                        const tl = limpiarTel(nuevoC.telefono);
+                        try {
+                          const res = await fetch(`${API}?action=agregarCliente&telefono=${encodeURIComponent(tl)}&nombre=${encodeURIComponent(nuevoC.nombre)}&email=${encodeURIComponent(nuevoC.email || '')}`);
+                          const data = await res.json();
+                          if (data.success) {
+                            await cargarDatos();
+                            setNuevoC({telefono: '', nombre: '', email: ''});
+                            alert('✓ Agregado');
+                          } else {
+                            alert(data.message);
+                          }
+                        } catch (e) {}
+                      }} className="bg-green-500 text-white py-3 rounded-lg font-bold">+ Agregar</button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-6 shadow">
+                    <h2 className="text-xl font-bold mb-4">Lista de Clientes ({CLIENTES.length})</h2>
+                    <div className="space-y-2">
+                      {CLIENTES.map(c => (
+                        <div key={c.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          {editC && editC.id === c.id ? (
+                            <div className="flex-1 flex gap-2">
+                              <input type="tel" value={editC.telefono} onChange={(e) => setEditC({...editC, telefono: e.target.value})} className="w-40 px-3 py-2 border rounded" />
+                              <input type="text" value={editC.nombre} onChange={(e) => setEditC({...editC, nombre: e.target.value})} className="flex-1 px-3 py-2 border rounded" />
+                              <input type="email" value={editC.email} onChange={(e) => setEditC({...editC, email: e.target.value})} className="flex-1 px-3 py-2 border rounded" />
+                              <button onClick={async () => {
+                                const tl = limpiarTel(editC.telefono);
+                                try {
+                                  await fetch(`${API}?action=actualizarCliente&clienteId=${editC.id}&telefono=${encodeURIComponent(tl)}&nombre=${encodeURIComponent(editC.nombre)}&email=${encodeURIComponent(editC.email || '')}`);
+                                  await cargarDatos();
+                                  setEditC(null);
+                                  alert('✓ Actualizado');
+                                } catch (e) {}
+                              }} className="px-4 py-2 bg-green-500 text-white rounded font-semibold">✓</button>
+                              <button onClick={() => setEditC(null)} className="px-4 py-2 bg-gray-300 rounded font-semibold">✗</button>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex-1">
+                                <p className="font-bold">{c.nombre}</p>
+                                <p className="text-sm text-gray-600">{c.telefono}</p>
+                                {c.email && <p className="text-xs text-gray-500">{c.email}</p>}
+                              </div>
+                              <div className="flex gap-2">
+                                <button onClick={async () => {
+                                  try {
+                                    await fetch(`${API}?action=toggleClienteActivo&clienteId=${c.id}`);
+                                    await cargarDatos();
+                                  } catch (e) {}
+                                }} className={`px-3 py-1 rounded text-sm font-semibold ${c.activo ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                                  {c.activo ? '✓ Activo' : '✗ Inactivo'}
+                                </button>
+                                <button onClick={() => setEditC(c)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm font-semibold">✏️</button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {adminVista === 'pedidos' && (
+                <div className="bg-white rounded-xl p-6 shadow">
+                  <h2 className="text-xl font-bold mb-4">Historial de Pedidos ({PEDIDOS.length})</h2>
+                  {PEDIDOS.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No hay pedidos aún</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {PEDIDOS.slice().reverse().map((p, i) => {
+                        let productos = [];
+                        try { productos = JSON.parse(p.productos); } catch (e) {}
+                        return (
+                          <div key={i} className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <p className="font-bold">{p.nombre}</p>
+                                <p className="text-sm text-gray-600">{p.telefono}</p>
+                                <p className="text-xs text-gray-500">{p.fecha} - {p.hora}</p>
+                              </div>
+                              <p className="text-xl font-bold text-green-600">${parseInt(p.total).toLocaleString()}</p>
+                            </div>
+                            <div className="bg-gray-50 rounded p-3 text-sm">
+                              {productos.map((item, j) => (
+                                <p key={j} className="text-gray-700">• {item.cantidad}x {item.nombre} - ${(item.precio * item.cantidad).toLocaleString()}</p>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {adminVista === 'entregas' && (
+                <div className="bg-white rounded-xl p-6 shadow">
+                  <h2 className="text-xl font-bold mb-4">Historial de Entregas ({HISTORIAL.length})</h2>
+                  {HISTORIAL.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">No hay entregas aún</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {HISTORIAL.slice().reverse().map((h, i) => (
+                        <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div className="flex-1">
+                            <p className="font-bold">{h.nombre}</p>
+                            <p className="text-sm text-gray-600">{h.telefono}</p>
+                            <p className="text-xs text-gray-500">{h.fecha} - {h.hora}</p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${h.decision === 'aceptado' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {h.decision === 'aceptado' ? '✓ Aceptado' : '✗ Cancelado'}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -867,173 +735,9 @@
         );
       }
 
-      // -- Vista Cliente: Inicio
-      if (vista === 'inicio') {
-        return (
-          <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 flex items-center justify-center p-4">
-            <div className="max-w-md w-full">
-              <div className="bg-white rounded-3xl shadow-2xl p-8">
-                <div className="text-center mb-8">
-                  <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-red-500 rounded-full mb-4 shadow-lg text-4xl">☕</div>
-                  <h1 className="text-3xl font-bold text-gray-800 mb-1">Wimpy</h1>
-                  <p className="text-orange-600 font-semibold mb-3">Restaurante y Cafetería</p>
-                  <div className="w-16 h-1 bg-gradient-to-r from-orange-500 to-red-500 mx-auto rounded-full mb-4"></div>
-                  <p className="text-gray-600 text-sm">Haz tu pedido o confirma la entrega</p>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">📱 Número de WhatsApp</label>
-                    <input type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="3118336562" className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 text-lg transition-all" disabled={cargando}/>
-                    <p className="text-xs text-gray-500 mt-2">💡 Ejemplo: 3118336562 o 57 3118336562</p>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3">
-                    <button onClick={validarCliente} disabled={!telefono || cargando} className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl font-bold text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-lg">{cargando ? '⏳ Validando...' : '🍔 Continuar'}</button>
-                    <button onClick={() => setVista('admin')} className="w-full text-gray-500 py-3 text-sm hover:text-orange-600 transition-colors">🔒 Panel de Administración</button>
-                  </div>
-                </div>
-              </div>
-              <div className="text-center mt-4 text-gray-500 text-xs">🔒 Tus datos están protegidos</div>
-            </div>
-          </div>
-        );
-      }
-
-      // -- Vista Menu/Pedido (después de validar o continuar)
-      if (vista === 'menu') {
-        return (
-          <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 p-4">
-            <div className="max-w-md mx-auto">
-              <div className="bg-white rounded-3xl shadow-2xl p-6 mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-full text-2xl">☕</div>
-                  <div>
-                    <h2 className="text-xl font-bold">{clienteValidado ? `Hola ${clienteValidado.nombre}` : 'Hola'}</h2>
-                    <p className="text-sm text-gray-600">Selecciona los productos y haz tu pedido</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-md p-4 mb-4">
-                <h3 className="font-semibold text-gray-800 mb-3">Menú</h3>
-                {PRODUCTOS_DB.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">No hay productos disponibles</div>
-                ) : (
-                  <div className="space-y-3">
-                    {PRODUCTOS_DB.filter(p => p.activo === true || p.activo === 'TRUE' || p.activo === 'true').map(p => (
-                      <div key={p.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
-                        <div>
-                          <p className="font-semibold">{p.nombre}</p>
-                          <p className="text-sm text-gray-500">${Number(p.precio).toLocaleString('es-CO')}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => agregarAlCarrito(p)} className="px-3 py-2 bg-orange-500 text-white rounded-lg">+ Añadir</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-white rounded-xl shadow-md p-4 mb-4">
-                <h3 className="font-semibold text-gray-800 mb-3">Tu carrito</h3>
-                {carrito.length === 0 ? (
-                  <div className="text-center text-gray-500 py-6">Tu carrito está vacío</div>
-                ) : (
-                  <div className="space-y-3">
-                    {carrito.map(item => (
-                      <div key={item.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
-                        <div>
-                          <p className="font-semibold">{item.nombre}</p>
-                          <p className="text-sm text-gray-500">Cantidad:
-                            <input type="number" min="1" value={item.cantidad} onChange={(e) => cambiarCantidad(item.id, Math.max(1, Number(e.target.value)))} className="w-16 ml-2 px-2 py-1 border rounded-md"/>
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">${(Number(item.precio) * item.cantidad).toLocaleString('es-CO')}</p>
-                          <button onClick={() => quitarDelCarrito(item.id)} className="text-xs text-red-600 mt-1">Eliminar</button>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="flex items-center justify-between pt-3 border-t">
-                      <p className="font-semibold">Total</p>
-                      <p className="text-xl font-bold">${Number(totalCarrito).toLocaleString('es-CO')}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                <div className="bg-white rounded-xl shadow-md p-4">
-                  <p className="text-sm text-gray-600 mb-2">Antes de enviar: verifica tu número vía WhatsApp</p>
-                  <div className="flex gap-2">
-                    <button onClick={abrirVerificacionWhatsApp} className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg">📲 Verificar en WhatsApp</button>
-                    <button onClick={() => { if (confirm('Continuar sin verificar?')) enviarPedido(); }} disabled={cargando} className="flex-1 px-4 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg">{cargando ? 'Enviando...' : '🛒 Enviar pedido'}</button>
-                  </div>
-                </div>
-
-                <button onClick={() => { setVista('inicio'); setCarrito([]); }} className="w-full text-gray-600 py-3 rounded-lg border">← Volver</button>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      // -- Vista resultado (varios tipos)
-      if (vista === 'resultado') {
-        if (decisionLocal === 'no_registrado') {
-          return (
-            <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-amber-50 flex items-center justify-center p-4">
-              <div className="max-w-md w-full">
-                <div className="bg-white rounded-3xl shadow-2xl p-8 text-center">
-                  <div className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-6 text-4xl">⚠️</div>
-                  <h2 className="text-2xl font-bold text-gray-800 mb-3">Número no registrado</h2>
-                  <p className="text-gray-600 mb-6">El número {telefono} no está registrado en Wimpy.</p>
-                  <button onClick={() => setVista('inicio')} className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl">Intentar nuevamente</button>
-                </div>
-              </div>
-            </div>
-          );
-        }
-
-        if (decisionLocal === 'pedido_enviado') {
-          return (
-            <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
-              <div className="max-w-md w-full">
-                <div className="bg-white rounded-3xl shadow-2xl p-8 text-center">
-                  <div className="inline-flex items-center justify-center w-24 h-24 bg-green-100 rounded-full mb-6 text-5xl">✅</div>
-                  <h2 className="text-3xl font-bold text-gray-800 mb-3">¡Pedido enviado! 🎉</h2>
-                  <p className="text-gray-600 mb-6">Tu pedido fue registrado y se abrió WhatsApp para notificar a Wimpy.</p>
-                  <button onClick={() => { setVista('inicio'); setDecisionLocal(null); }} className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl">✓ Finalizar</button>
-                </div>
-              </div>
-            </div>
-          );
-        }
-
-        return null;
-      }
-
       return null;
     }
 
-    // ============================
-    // COMPONENTES AUXILIARES
-    // ============================
-    function AgregarClienteForm({ onAdd }) {
-      const [data, setData] = React.useState({ telefono:'', nombre:'', email:'' });
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <input type="tel" placeholder="Teléfono (3118336562)" value={data.telefono} onChange={(e)=> setData({...data, telefono:e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg"/>
-          <input type="text" placeholder="Nombre completo" value={data.nombre} onChange={(e)=> setData({...data, nombre:e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg"/>
-          <input type="email" placeholder="Email (opcional)" value={data.email} onChange={(e)=> setData({...data, email:e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg"/>
-          <div className="md:col-span-3">
-            <button onClick={() => { onAdd(data); setData({telefono:'',nombre:'',email:''}); }} className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg">+ Agregar Cliente</button>
-          </div>
-        </div>
-      );
-    }
-
-    // Render
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>

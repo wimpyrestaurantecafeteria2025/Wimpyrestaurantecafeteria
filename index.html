@@ -1,108 +1,1188 @@
-
 <!DOCTYPE html>
 <html lang="es">
-<cabeza>
+<head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="ancho=ancho-del-dispositivo, escala-inicial=1.0">
-  Aplicación Wimpy - Pedidos
-  <estilo>
-    cuerpo { familia de fuentes: Arial, sans-serif; color de fondo: #121212; color: #e0e0e0; margen: 0; relleno: 0; }
-    encabezado { color de fondo: #1f1f1f; relleno: 15px; alineación del texto: centro; tamaño de fuente: 1.4em; color: #fff; }
-    nav { display: flex; justify-content: space-around; background-color: #1f1f1f; padding: 10px; position: sticky; top: 0; }
-    botón de navegación { color de fondo: #333; color: #fff; borde: ninguno; relleno: 8px 12px; radio del borde: 8px; cursor: puntero; }
-    botón de navegación:hover { background-color: #555; }
-    sección { relleno: 15px; }
-    .oculto { display: ninguno; }
-    .admin-btn { posición: fija; inferior: 10px; derecha: 10px; fondo: #007bff; color: blanco; relleno: 12px; borde: ninguno; radio del borde: 50%; tamaño de fuente: 1.2em; cursor: puntero; }
-    .admin-panel { color de fondo: #1f1f1f; radio del borde: 10px; relleno: 15px; margen: 15px 0; }
-    entrada, seleccionar { ancho: 100%; relleno: 8px; margen: 6px 0; radio del borde: 5px; borde: 1px sólido #555; fondo: #2b2b2b; color: #fff; }
-    tabla { ancho: 100%; colapso del borde: colapsar; margen superior: 10px; }
-    th, td { borde: 1px sólido #444; relleno: 8px; alineación del texto: izquierda; }
-    th { color de fondo: #333; }
-    .btn { color de fondo: #007bff; borde: ninguno; color: blanco; relleno: 8px 12px; radio del borde: 5px; cursor: puntero; }
-    .btn:hover { color de fondo: #0056b3; }
-  </estilo>
-</cabeza>
-<cuerpo>
-<header>ðŸ ” Aplicación Wimpy</header>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wimpy - Confirmación de Entregas</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍔</text></svg>">
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #cuenta-cobro, #cuenta-cobro * { visibility: visible; }
+      #cuenta-cobro { position: absolute; left: 0; top: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
 
-<navegación>
-  <button onclick="mostrar('inicio')">Inicio</button>
-  <button onclick="mostrar('pedidos')">Pedidos</button>
-  <button onclick="mostrar('clientes')">Clientes</button>
-  <button onclick="mostrar('productos')">Productos</button>
-  <button onclick="mostrar('configuracion')">Configuración</button>
-  <botón onclick="mostrar('historial')">Historial</botón>
-</nav>
+  <script type="text/babel">
+    const { useState, useMemo, useEffect } = React;
 
-<section id="inicio">
-  Bienvenido a Wimpy
-  <p>Administra tus pedidos, clientes y productos de forma rápida y segura.</p>
-</sección>
+    // ============================================
+    // CONFIGURACIÓN
+    // ============================================
+    
+    // 🔥 TU URL DE GOOGLE SHEETS API
+    const GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec';
+    
+    // 📱 Número de WhatsApp de Wimpy (configurable desde admin)
+    let NUMERO_WIMPY = '573118336562'; // Sin el +
+    const ADMIN_PASSWORD = 'wimpy2025';
 
-<sección id="pedidos" class="oculto">
-  Pedidos
-  <p>Los clientes pueden enviar sus pedidos por WhatsApp.</p>
-  <button class="btn" onclick="enviarWhatsApp()">Enviar pedido</button>
-</sección>
+    let CLIENTES_DB = [];
+    let HISTORIAL = [];
 
-<sección id="clientes" class="oculto">
-  Clientes
-  <div id="listaClientes">Cargando...</div>
-</sección>
+    function App() {
+      const [vista, setVista] = useState('inicio');
+      const [telefono, setTelefono] = useState('');
+      const [clienteValidado, setClienteValidado] = useState(null);
+      const [decision, setDecision] = useState(null);
+      const [cargando, setCargando] = useState(false);
+      const [cargandoDatos, setCargandoDatos] = useState(true);
+      
+      const [autenticado, setAutenticado] = useState(false);
+      const [passwordInput, setPasswordInput] = useState('');
+      const [vistaAdmin, setVistaAdmin] = useState('dashboard');
+      
+      const [nuevoCliente, setNuevoCliente] = useState({
+        telefono: '',
+        nombre: '',
+        email: ''
+      });
+      
+      const [numeroWimpy, setNumeroWimpy] = useState(NUMERO_WIMPY);
+      const [editandoNumero, setEditandoNumero] = useState(false);
+      
+      const [filtroMes, setFiltroMes] = useState(new Date().getMonth());
+      const [filtroAnio, setFiltroAnio] = useState(new Date().getFullYear());
+      const [filtroCliente, setFiltroCliente] = useState('todos');
+      
+      const [datosFactura, setDatosFactura] = useState({
+        numeroFactura: '',
+        empresaCliente: '',
+        mesFactura: new Date().getMonth(),
+        anioFactura: new Date().getFullYear(),
+        valorAlmuerzo: '',
+        fechaEmision: new Date().toISOString().split('T')[0]
+      });
 
-<sección id="productos" class="oculto">
-  Productos
-  <div id="listaProductos">Cargando...</div>
-</sección>
+      useEffect(() => {
+        if (autenticado) {
+          cargarDatosIniciales();
+        }
+      }, [autenticado]);
 
-<sección id="configuracion" class="oculto">
-  <h2>Configuración</h2>
-  <label>Número de WhatsApp:</label>
-  <input type="text" id="numeroWimpy" value="573118336562" />
-  <button class="btn" onclick="guardarConfiguracion()">Guardar</button>
-</sección>
+      const cargarDatosIniciales = async () => {
+        setCargandoDatos(true);
+        try {
+          const resClientes = await fetch(`${GOOGLE_SHEETS_API}?action=obtenerClientes`);
+          const dataClientes = await resClientes.json();
+          if (dataClientes.success) {
+            CLIENTES_DB = dataClientes.clientes;
+          }
 
-<section id="historial" class="oculto">
-  <h2>Historial de pedidos</h2>
-  <div id="tablaHistorial">Cargando...</div>
-</sección>
+          const resHistorial = await fetch(`${GOOGLE_SHEETS_API}?action=obtenerHistorial`);
+          const dataHistorial = await resHistorial.json();
+          if (dataHistorial.success) {
+            HISTORIAL = dataHistorial.historial;
+          }
+        } catch (error) {
+          console.error('Error cargando datos:', error);
+        }
+        setCargandoDatos(false);
+      };
 
-<button class="admin-btn" onclick="accederAdmin()">ðŸ”'</button>
+      const limpiarTelefono = (tel) => {
+        let limpio = tel.replace(/\s+/g, '').replace(/-/g, '');
+        if (!limpio.startsWith('+')) {
+          if (limpio.startsWith('57')) {
+            limpio = '+' + limpio;
+          } else {
+            limpio = '+57' + limpio;
+          }
+        }
+        return limpio;
+      };
 
-<guión>
-constante GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec';
-deje que adminAcceso = false;
+      const nombreMes = (mes) => {
+        const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        return meses[mes];
+      };
 
-función mostrar(sección) {
-  document.querySelectorAll('sección').forEach(s => s.classList.add('oculto'));
-  document.getElementById(seccion).classList.remove('oculto');
-}
+      const guardarNumeroWimpy = () => {
+        NUMERO_WIMPY = numeroWimpy.replace(/\s+/g, '').replace(/-/g, '').replace(/\+/g, '');
+        if (!NUMERO_WIMPY.startsWith('57')) {
+          NUMERO_WIMPY = '57' + NUMERO_WIMPY;
+        }
+        setEditandoNumero(false);
+        alert('✓ Número de WhatsApp de Wimpy actualizado');
+      };
 
-función accederAdmin() {
-  const pin = Prompt("Ingrese el PIN de administrador:");
-  si (pin === "1995") {
-    adminAcceso = true;
-    alert("Acceso concedido âœ...");
-  } demás {
-    alert("PIN incorrecto â Œ");
-  }
-}
+      const validarCliente = async () => {
+        if (!telefono.trim()) {
+          alert('Por favor ingresa tu número de teléfono');
+          return;
+        }
 
-función asíncrona guardarConfiguracion() {
-  if (!adminAcceso) return alert("Acceso restringido");
-  const numero = document.getElementById("numeroWimpy").value.trim();
-  esperar fetch(`${GOOGLE_SHEETS_API}?action=guardarConfiguracion&numero=${numero}`);
-  alert("Configuración guardada");
-}
+        setCargando(true);
+        
+        try {
+          const telefonoLimpio = limpiarTelefono(telefono);
+          const response = await fetch(`${GOOGLE_SHEETS_API}?action=validarCliente&telefono=${encodeURIComponent(telefonoLimpio)}`);
+          const data = await response.json();
+          
+          if (data.success) {
+            setClienteValidado(data.cliente);
+            setVista('confirmacion');
+          } else {
+            setClienteValidado(null);
+            setVista('resultado');
+            setDecision('no_registrado');
+          }
+        } catch (error) {
+          console.error('Error validando cliente:', error);
+          alert('Error de conexión. Por favor intenta nuevamente.');
+        }
+        
+        setCargando(false);
+      };
 
-función enviarWhatsApp() {
-  const numero = document.getElementById("numeroWimpy").value.trim();
-  const mensaje = encodeURIComponent("Hola, quiero hacer un pedido en Wimpy ðŸ ”");
-  ventana.open(`https://wa.me/${numero}?text=${mensaje}`, "_blank");
-}
+      const registrarDecision = async (tipoDecision) => {
+        setCargando(true);
+        
+        try {
+          const ahora = new Date();
+          const url = `${GOOGLE_SHEETS_API}?action=registrarDecision&telefono=${encodeURIComponent(clienteValidado.telefono)}&nombre=${encodeURIComponent(clienteValidado.nombre)}&clienteId=${clienteValidado.id}&decision=${tipoDecision}`;
+          
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          if (data.success) {
+            const registro = {
+              id: Date.now(),
+              fecha: ahora.toLocaleDateString('es-CO', {day: '2-digit', month: '2-digit', year: 'numeric'}),
+              hora: ahora.toLocaleTimeString('es-CO'),
+              telefono: clienteValidado.telefono,
+              nombre: clienteValidado.nombre,
+              clienteId: clienteValidado.id,
+              decision: tipoDecision,
+              mes: ahora.getMonth(),
+              anio: ahora.getFullYear(),
+              timestamp: ahora.getTime()
+            };
+            
+            HISTORIAL.push(registro);
+            setDecision(tipoDecision);
+            setVista('resultado');
+            
+            // ✅ Mensaje para Safari - formato compatible
+            const mensajeWimpy = tipoDecision === 'aceptado' 
+              ? `Yo ${clienteValidado.nombre} he recibido mi Almuerzo, muchas gracias Wimpy`
+              : `Yo ${clienteValidado.nombre} NO he recibido mi Almuerzo. Por favor contactarme.`;
+            
+            // Safari compatible: usar window.location.href en lugar de window.open
+            const urlWhatsApp = `https://wa.me/${NUMERO_WIMPY}?text=${encodeURIComponent(mensajeWimpy)}`;
+            
+            // Dar tiempo para que se vea la pantalla de confirmación
+            setTimeout(() => {
+              // Safari compatible: cambiar directamente la ubicación
+              if (/iPhone|iPad|iPod|Safari/i.test(navigator.userAgent)) {
+                // Para iOS/Safari
+                window.location.href = urlWhatsApp;
+              } else {
+                // Para otros navegadores
+                window.open(urlWhatsApp, '_blank');
+              }
+            }, 1000);
+          } else {
+            alert('Error al registrar. Por favor intenta nuevamente.');
+          }
+        } catch (error) {
+          console.error('Error registrando decisión:', error);
+          alert('Error de conexión. Por favor intenta nuevamente.');
+        }
+        
+        setCargando(false);
+      };
 
-mostrar('inicio');
-</script>
-</cuerpo>
+      const agregarCliente = async () => {
+        if (!nuevoCliente.telefono || !nuevoCliente.nombre) {
+          alert('Por favor completa teléfono y nombre');
+          return;
+        }
+
+        const telefonoLimpio = limpiarTelefono(nuevoCliente.telefono);
+        setCargando(true);
+        
+        try {
+          const url = `${GOOGLE_SHEETS_API}?action=agregarCliente&telefono=${encodeURIComponent(telefonoLimpio)}&nombre=${encodeURIComponent(nuevoCliente.nombre)}&email=${encodeURIComponent(nuevoCliente.email || '')}`;
+          
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          if (data.success) {
+            alert('✓ Cliente agregado exitosamente');
+            setNuevoCliente({ telefono: '', nombre: '', email: '' });
+            await cargarDatosIniciales();
+          } else {
+            alert(data.message || 'Error al agregar cliente');
+          }
+        } catch (error) {
+          console.error('Error agregando cliente:', error);
+          alert('Error de conexión. Por favor intenta nuevamente.');
+        }
+        
+        setCargando(false);
+      };
+
+      const toggleClienteActivo = async (clienteId) => {
+        try {
+          const url = `${GOOGLE_SHEETS_API}?action=toggleClienteActivo&clienteId=${clienteId}`;
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          if (data.success) {
+            await cargarDatosIniciales();
+            setVistaAdmin('clientes');
+          }
+        } catch (error) {
+          console.error('Error cambiando estado:', error);
+          alert('Error de conexión. Por favor intenta nuevamente.');
+        }
+      };
+
+      const reporteMensual = useMemo(() => {
+        const entregas = HISTORIAL.filter(h => 
+          h.mes === filtroMes && 
+          h.anio === filtroAnio &&
+          h.decision === 'aceptado'
+        );
+
+        if (filtroCliente !== 'todos') {
+          return entregas.filter(h => h.clienteId === parseInt(filtroCliente));
+        }
+
+        return entregas;
+      }, [filtroMes, filtroAnio, filtroCliente]);
+
+      const reportePorCliente = useMemo(() => {
+        const grupos = {};
+        
+        reporteMensual.forEach(entrega => {
+          if (!grupos[entrega.clienteId]) {
+            grupos[entrega.clienteId] = {
+              nombre: entrega.nombre,
+              telefono: entrega.telefono,
+              entregas: []
+            };
+          }
+          grupos[entrega.clienteId].entregas.push(entrega);
+        });
+
+        return Object.values(grupos).map(grupo => ({
+          ...grupo,
+          total: grupo.entregas.length
+        }));
+      }, [reporteMensual]);
+
+      const estadisticas = useMemo(() => {
+        const total = HISTORIAL.length;
+        const aceptados = HISTORIAL.filter(h => h.decision === 'aceptado').length;
+        const cancelados = HISTORIAL.filter(h => h.decision === 'cancelado').length;
+        const mesActual = HISTORIAL.filter(h => 
+          h.mes === new Date().getMonth() && 
+          h.anio === new Date().getFullYear() &&
+          h.decision === 'aceptado'
+        ).length;
+
+        return { total, aceptados, cancelados, mesActual };
+      }, [HISTORIAL.length]);
+
+      const iniciarSesionAdmin = () => {
+        if (passwordInput === ADMIN_PASSWORD) {
+          setAutenticado(true);
+          setVista('admin');
+          setPasswordInput('');
+        } else {
+          alert('❌ Contraseña incorrecta');
+        }
+      };
+
+      const cerrarSesionAdmin = () => {
+        setAutenticado(false);
+        setVista('inicio');
+        setVistaAdmin('dashboard');
+      };
+
+      const reiniciar = () => {
+        setVista('inicio');
+        setTelefono('');
+        setClienteValidado(null);
+        setDecision(null);
+      };
+
+      // ============================================
+      // RENDERIZADO DE VISTAS
+      // ============================================
+
+      // VISTA: Login Admin
+      if (vista === 'admin' && !autenticado) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-gray-800 via-gray-900 to-black flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-red-500 rounded-full mb-4 text-4xl">
+                  🔒
+                </div>
+                <h1 className="text-2xl font-bold text-gray-800 mb-2">Acceso Administrador</h1>
+                <p className="text-gray-600">Wimpy Restaurante</p>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">🔑 Contraseña</label>
+                  <input
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && iniciarSesionAdmin()}
+                    placeholder="Ingresa la contraseña"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  onClick={iniciarSesionAdmin}
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg"
+                >
+                  Ingresar
+                </button>
+                <button
+                  onClick={reiniciar}
+                  className="w-full text-gray-600 py-2 text-sm hover:text-orange-600 transition-colors"
+                >
+                  ← Volver
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // VISTA: Panel Admin
+      if (vista === 'admin' && autenticado) {
+        return (
+          <div className="min-h-screen bg-gray-50">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 shadow-lg">
+              <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">☕</span>
+                  <div>
+                    <h1 className="text-xl font-bold">Wimpy - Admin</h1>
+                    <p className="text-xs opacity-90">Panel de Control</p>
+                  </div>
+                </div>
+                <button
+                  onClick={cerrarSesionAdmin}
+                  className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition-all"
+                >
+                  🚪 Cerrar Sesión
+                </button>
+              </div>
+            </div>
+
+            {/* Navegación */}
+            <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+              <div className="max-w-7xl mx-auto px-4">
+                <div className="flex gap-2 overflow-x-auto py-2">
+                  <button
+                    onClick={() => setVistaAdmin('dashboard')}
+                    className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${
+                      vistaAdmin === 'dashboard' 
+                        ? 'bg-orange-100 text-orange-700' 
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    📊 Dashboard
+                  </button>
+                  <button
+                    onClick={() => setVistaAdmin('configuracion')}
+                    className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${
+                      vistaAdmin === 'configuracion' 
+                        ? 'bg-orange-100 text-orange-700' 
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    ⚙️ Configuración
+                  </button>
+                  <button
+                    onClick={() => setVistaAdmin('clientes')}
+                    className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${
+                      vistaAdmin === 'clientes' 
+                        ? 'bg-orange-100 text-orange-700' 
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    👥 Clientes
+                  </button>
+                  <button
+                    onClick={() => setVistaAdmin('reportes')}
+                    className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${
+                      vistaAdmin === 'reportes' 
+                        ? 'bg-orange-100 text-orange-700' 
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    📈 Reportes
+                  </button>
+                  <button
+                    onClick={() => setVistaAdmin('factura')}
+                    className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${
+                      vistaAdmin === 'factura' 
+                        ? 'bg-orange-100 text-orange-700' 
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    💰 Cuenta de Cobro
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Contenido */}
+            <div className="max-w-7xl mx-auto p-4">
+              {/* CONFIGURACIÓN */}
+              {vistaAdmin === 'configuracion' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow-md p-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">⚙️ Configuración del Sistema</h2>
+                    
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                      <h3 className="font-bold text-blue-800 mb-2">📱 Número de WhatsApp de Wimpy</h3>
+                      <p className="text-sm text-blue-700 mb-4">
+                        Este es el número al que llegarán los mensajes de confirmación de los clientes
+                      </p>
+                      
+                      {editandoNumero ? (
+                        <div className="space-y-3">
+                          <input
+                            type="tel"
+                            value={numeroWimpy}
+                            onChange={(e) => setNumeroWimpy(e.target.value)}
+                            placeholder="3118336562"
+                            className="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-lg"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={guardarNumeroWimpy}
+                              className="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600"
+                            >
+                              ✓ Guardar
+                            </button>
+                            <button
+                              onClick={() => {
+                                setNumeroWimpy(NUMERO_WIMPY);
+                                setEditandoNumero(false);
+                              }}
+                              className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-2xl font-bold text-gray-800">+{NUMERO_WIMPY}</p>
+                            <p className="text-xs text-gray-500 mt-1">Número actual de Wimpy</p>
+                          </div>
+                          <button
+                            onClick={() => setEditandoNumero(true)}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600"
+                          >
+                            ✏️ Editar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <h3 className="font-bold text-yellow-800 mb-2">⚠️ Importante</h3>
+                      <ul className="text-sm text-yellow-700 space-y-1">
+                        <li>• Cuando un cliente confirma su entrega, le abrirá WhatsApp</li>
+                        <li>• El mensaje dirá: "Yo [nombre] he recibido mi Almuerzo, muchas gracias Wimpy"</li>
+                        <li>• El mensaje se enviará al número de Wimpy configurado arriba</li>
+                        <li>• Esto te permite tener evidencia de todas las entregas</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* DASHBOARD */}
+              {vistaAdmin === 'dashboard' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-white rounded-xl p-5 shadow-md border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm text-gray-600 font-semibold">Total Entregas</p>
+                        <span className="text-3xl">📦</span>
+                      </div>
+                      <p className="text-3xl font-bold text-blue-700">{estadisticas.total}</p>
+                    </div>
+                    
+                    <div className="bg-white rounded-xl p-5 shadow-md border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm text-gray-600 font-semibold">Aceptadas</p>
+                        <span className="text-3xl">✅</span>
+                      </div>
+                      <p className="text-3xl font-bold text-green-700">{estadisticas.aceptados}</p>
+                    </div>
+                    
+                    <div className="bg-white rounded-xl p-5 shadow-md border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm text-gray-600 font-semibold">Canceladas</p>
+                        <span className="text-3xl">❌</span>
+                      </div>
+                      <p className="text-3xl font-bold text-red-700">{estadisticas.cancelados}</p>
+                    </div>
+                    
+                    <div className="bg-white rounded-xl p-5 shadow-md border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm text-gray-600 font-semibold">Este Mes</p>
+                        <span className="text-3xl">📅</span>
+                      </div>
+                      <p className="text-3xl font-bold text-orange-700">{estadisticas.mesActual}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-md p-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">Entregas Recientes</h2>
+                    {HISTORIAL.length === 0 ? (
+                      <div className="text-center py-12 text-gray-500">
+                        <span className="text-6xl">📦</span>
+                        <p className="mt-4">No hay entregas registradas todavía</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {HISTORIAL.slice().reverse().slice(0, 10).map((registro) => (
+                          <div key={registro.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-800">{registro.nombre}</p>
+                              <p className="text-xs text-gray-500">{registro.fecha} • {registro.hora}</p>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              registro.decision === 'aceptado' 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-red-100 text-red-700'
+                            }`}>
+                              {registro.decision === 'aceptado' ? '✓ Aceptado' : '✗ Cancelado'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* CLIENTES */}
+              {vistaAdmin === 'clientes' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow-md p-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <span>➕</span> Agregar Nuevo Cliente
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <input
+                        type="tel"
+                        placeholder="Teléfono (3118336562)"
+                        value={nuevoCliente.telefono}
+                        onChange={(e) => setNuevoCliente({...nuevoCliente, telefono: e.target.value})}
+                        className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Nombre completo"
+                        value={nuevoCliente.nombre}
+                        onChange={(e) => setNuevoCliente({...nuevoCliente, nombre: e.target.value})}
+                        className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                      <input
+                        type="email"
+                        placeholder="Email (opcional)"
+                        value={nuevoCliente.email}
+                        onChange={(e) => setNuevoCliente({...nuevoCliente, email: e.target.value})}
+                        className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+                    <button
+                      onClick={agregarCliente}
+                      disabled={cargando}
+                      className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-600 transition-all shadow-md disabled:opacity-50"
+                    >
+                      + Agregar Cliente
+                    </button>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-md p-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">
+                      Clientes Registrados ({CLIENTES_DB.length})
+                    </h2>
+                    {cargandoDatos ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500">Cargando clientes...</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {CLIENTES_DB.map((cliente) => (
+                          <div key={cliente.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-800">{cliente.nombre}</p>
+                              <p className="text-sm text-gray-600">{cliente.telefono}</p>
+                              {cliente.email && <p className="text-xs text-gray-500">{cliente.email}</p>}
+                            </div>
+                            <button
+                              onClick={() => toggleClienteActivo(cliente.id)}
+                              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                                cliente.activo 
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                              }`}
+                            >
+                              {cliente.activo ? '✓ Activo' : '✗ Inactivo'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* REPORTES */}
+              {vistaAdmin === 'reportes' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow-md p-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">Filtros de Búsqueda</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Mes</label>
+                        <select
+                          value={filtroMes}
+                          onChange={(e) => setFiltroMes(parseInt(e.target.value))}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        >
+                          {Array.from({length: 12}, (_, i) => (
+                            <option key={i} value={i}>{nombreMes(i)}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Año</label>
+                        <select
+                          value={filtroAnio}
+                          onChange={(e) => setFiltroAnio(parseInt(e.target.value))}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        >
+                          <option value={2024}>2024</option>
+                          <option value={2025}>2025</option>
+                          <option value={2026}>2026</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Cliente</label>
+                        <select
+                          value={filtroCliente}
+                          onChange={(e) => setFiltroCliente(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        >
+                          <option value="todos">Todos los clientes</option>
+                          {CLIENTES_DB.map((cliente) => (
+                            <option key={cliente.id} value={cliente.id}>{cliente.nombre}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-xl shadow-md p-6 text-white">
+                    <h3 className="text-2xl font-bold mb-2">
+                      {nombreMes(filtroMes)} {filtroAnio}
+                    </h3>
+                    <p className="text-3xl font-bold">{reporteMensual.length} almuerzos entregados</p>
+                    <p className="text-sm opacity-90 mt-2">Solo almuerzos aceptados (no se cuentan cancelados)</p>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-md p-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">Detalle por Cliente</h2>
+                    {reportePorCliente.length === 0 ? (
+                      <div className="text-center py-12 text-gray-500">
+                        <span className="text-6xl">📄</span>
+                        <p className="mt-4">No hay entregas en este período</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {reportePorCliente.map((reporte) => (
+                          <div key={reporte.telefono} className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <h3 className="font-bold text-gray-800 text-lg">{reporte.nombre}</h3>
+                                <p className="text-sm text-gray-600">{reporte.telefono}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-3xl font-bold text-orange-600">{reporte.total}</p>
+                                <p className="text-xs text-gray-500">almuerzos</p>
+                              </div>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto">
+                              <p className="text-xs font-semibold text-gray-600 mb-2">Fechas de entrega:</p>
+                              <div className="space-y-1">
+                                {reporte.entregas.map((e) => (
+                                  <div key={e.id} className="text-xs text-gray-700 flex items-center justify-between">
+                                    <span>📅 {e.fecha}</span>
+                                    <span className="text-gray-500">{e.hora}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* CUENTA DE COBRO */}
+              {vistaAdmin === 'factura' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow-md p-6">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <span>📄</span> Generar Cuenta de Cobro
+                    </h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          #️⃣ Número de Cuenta de Cobro
+                        </label>
+                        <input
+                          type="text"
+                          value={datosFactura.numeroFactura}
+                          onChange={(e) => setDatosFactura({...datosFactura, numeroFactura: e.target.value})}
+                          placeholder="Ej: 001-2025"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          🏢 Empresa Cliente
+                        </label>
+                        <input
+                          type="text"
+                          value={datosFactura.empresaCliente}
+                          onChange={(e) => setDatosFactura({...datosFactura, empresaCliente: e.target.value})}
+                          placeholder="Nombre de la empresa"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          📅 Mes de Cobro
+                        </label>
+                        <select
+                          value={datosFactura.mesFactura}
+                          onChange={(e) => setDatosFactura({...datosFactura, mesFactura: parseInt(e.target.value)})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        >
+                          {Array.from({length: 12}, (_, i) => (
+                            <option key={i} value={i}>{nombreMes(i)}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          📅 Año de Cobro
+                        </label>
+                        <select
+                          value={datosFactura.anioFactura}
+                          onChange={(e) => setDatosFactura({...datosFactura, anioFactura: parseInt(e.target.value)})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        >
+                          <option value={2024}>2024</option>
+                          <option value={2025}>2025</option>
+                          <option value={2026}>2026</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          💵 Valor por Almuerzo (COP)
+                        </label>
+                        <input
+                          type="number"
+                          value={datosFactura.valorAlmuerzo}
+                          onChange={(e) => setDatosFactura({...datosFactura, valorAlmuerzo: e.target.value})}
+                          placeholder="15000"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          📅 Fecha de Emisión
+                        </label>
+                        <input
+                          type="date"
+                          value={datosFactura.fechaEmision}
+                          onChange={(e) => setDatosFactura({...datosFactura, fechaEmision: e.target.value})}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        if (!datosFactura.numeroFactura || !datosFactura.empresaCliente || !datosFactura.valorAlmuerzo) {
+                          alert('Por favor completa todos los campos requeridos');
+                          return;
+                        }
+                        window.print();
+                      }}
+                      className="w-full md:w-auto px-8 py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg"
+                    >
+                      🖨️ Generar e Imprimir
+                    </button>
+                  </div>
+
+                  {datosFactura.numeroFactura && datosFactura.empresaCliente && datosFactura.valorAlmuerzo && (
+                    <div id="cuenta-cobro" className="bg-white rounded-xl shadow-2xl p-8 border-2 border-gray-300">
+                      <div className="text-center mb-8 pb-6 border-b-2 border-orange-500">
+                        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-red-500 rounded-full mb-4 text-4xl">
+                          ☕
+                        </div>
+                        <h1 className="text-3xl font-bold text-gray-800 mb-1">Wimpy</h1>
+                        <p className="text-lg text-orange-600 font-semibold">Restaurante y Cafetería</p>
+                      </div>
+
+                      <div className="text-center mb-8">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">CUENTA DE COBRO</h2>
+                        <p className="text-lg text-gray-600">No. {datosFactura.numeroFactura}</p>
+                        <p className="text-sm text-gray-500">Fecha: {new Date(datosFactura.fechaEmision).toLocaleDateString('es-CO', {day: '2-digit', month: 'long', year: 'numeric'})}</p>
+                      </div>
+
+                      <div className="mb-8 bg-gray-50 rounded-lg p-6">
+                        <h3 className="font-bold text-gray-800 mb-3 text-lg">CLIENTE:</h3>
+                        <p className="text-xl font-semibold text-gray-800">{datosFactura.empresaCliente}</p>
+                      </div>
+
+                      <div className="mb-8">
+                        <h3 className="font-bold text-gray-800 mb-4 text-lg">DETALLE DEL SERVICIO:</h3>
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="bg-orange-100">
+                              <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-800">Descripción</th>
+                              <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-800">Cantidad</th>
+                              <th className="border border-gray-300 px-4 py-3 text-right font-semibold text-gray-800">Valor Unit.</th>
+                              <th className="border border-gray-300 px-4 py-3 text-right font-semibold text-gray-800">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(() => {
+                              const entregas = HISTORIAL.filter(h => 
+                                h.mes === datosFactura.mesFactura && 
+                                h.anio === datosFactura.anioFactura &&
+                                h.decision === 'aceptado'
+                              );
+                              const cantidad = entregas.length;
+                              const valorUnit = parseFloat(datosFactura.valorAlmuerzo) || 0;
+                              const total = cantidad * valorUnit;
+
+                              return (
+                                <tr>
+                                  <td className="border border-gray-300 px-4 py-3">
+                                    <p className="font-semibold">Servicio de Almuerzos</p>
+                                    <p className="text-sm text-gray-600">Período: {nombreMes(datosFactura.mesFactura)} {datosFactura.anioFactura}</p>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-3 text-center text-lg font-bold">{cantidad}</td>
+                                  <td className="border border-gray-300 px-4 py-3 text-right">
+                                    ${valorUnit.toLocaleString('es-CO')}
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-3 text-right text-lg font-bold text-orange-600">
+                                    ${total.toLocaleString('es-CO')}
+                                  </td>
+                                </tr>
+                              );
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg p-6 mb-8">
+                        <div className="flex items-center justify-between">
+                          <span className="text-2xl font-bold">TOTAL A PAGAR:</span>
+                          <span className="text-4xl font-bold">
+                            ${(() => {
+                              const entregas = HISTORIAL.filter(h => 
+                                h.mes === datosFactura.mesFactura && 
+                                h.anio === datosFactura.anioFactura &&
+                                h.decision === 'aceptado'
+                              );
+                              const cantidad = entregas.length;
+                              const valorUnit = parseFloat(datosFactura.valorAlmuerzo) || 0;
+                              return (cantidad * valorUnit).toLocaleString('es-CO');
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-sm text-gray-600 space-y-2 mb-8">
+                        <p>• Solo se facturan almuerzos entregados y confirmados por el cliente</p>
+                        <p>• Los almuerzos cancelados no se incluyen en esta cuenta de cobro</p>
+                      </div>
+
+                      <div className="mt-12 pt-8 border-t-2 border-gray-300">
+                        <div className="text-center">
+                          <div className="inline-block">
+                            <div className="border-t-2 border-gray-800 pt-2 px-12">
+                              <p className="font-bold text-gray-800">Wimpy Restaurante y Cafetería</p>
+                              <p className="text-sm text-gray-600">Firma Autorizada</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      // VISTA: Inicio (Clientes)
+      if (vista === 'inicio') {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 flex items-center justify-center p-4">
+            <div className="max-w-md w-full">
+              <div className="bg-white rounded-3xl shadow-2xl p-8">
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-red-500 rounded-full mb-4 shadow-lg text-4xl">
+                    ☕
+                  </div>
+                  <h1 className="text-3xl font-bold text-gray-800 mb-1">Wimpy</h1>
+                  <p className="text-orange-600 font-semibold mb-3">Restaurante y Cafetería</p>
+                  <div className="w-16 h-1 bg-gradient-to-r from-orange-500 to-red-500 mx-auto rounded-full mb-4"></div>
+                  <p className="text-gray-600 text-sm">Confirma la recepción de tu pedido</p>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">📱 Número de WhatsApp</label>
+                    <input
+                      type="tel"
+                      value={telefono}
+                      onChange={(e) => setTelefono(e.target.value)}
+                      placeholder="3118336562"
+                      className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent text-lg transition-all"
+                      disabled={cargando}
+                    />
+                    <p className="text-xs text-gray-500 mt-2">💡 Ejemplo: 3118336562 o 57 3118336562</p>
+                  </div>
+                  <button
+                    onClick={validarCliente}
+                    disabled={!telefono || cargando}
+                    className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl font-bold text-lg hover:from-orange-600 hover:to-red-600 transition-all transform hover:scale-105 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
+                  >
+                    {cargando ? '⏳ Validando...' : '🍔 Continuar'}
+                  </button>
+                </div>
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <button
+                    onClick={() => setVista('admin')}
+                    className="w-full text-gray-500 py-2 text-sm hover:text-orange-600 transition-colors flex items-center justify-center gap-2 font-medium"
+                  >
+                    🔒 Panel de Administración
+                  </button>
+                </div>
+              </div>
+              <div className="text-center mt-4 text-gray-500 text-xs">🔒 Tus datos están protegidos</div>
+            </div>
+          </div>
+        );
+      }
+
+      // VISTA: Confirmación
+      if (vista === 'confirmacion') {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
+            <div className="max-w-md w-full">
+              <div className="bg-white rounded-3xl shadow-2xl p-8">
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full mb-4 shadow-lg text-4xl animate-pulse">
+                    📦
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                    ¡Hola {clienteValidado.nombre}! 👋
+                  </h2>
+                  <p className="text-gray-600">¿Recibiste tu pedido de Wimpy?</p>
+                </div>
+
+                <div className="bg-orange-50 rounded-xl p-4 mb-6 border border-orange-200">
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">📞 Teléfono:</span> {clienteValidado.telefono}
+                  </p>
+                </div>
+
+                  <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
+                    <p className="text-sm text-blue-800">
+                      📲 Al confirmar, se abrirá WhatsApp automáticamente para enviar el mensaje a Wimpy
+                    </p>
+                  </div>
+
+                <div className="space-y-4">
+                  <button
+                    onClick={() => registrarDecision('aceptado')}
+                    disabled={cargando}
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-5 rounded-xl font-bold text-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 flex items-center justify-center gap-3 shadow-lg disabled:opacity-50 disabled:transform-none"
+                  >
+                    <span className="text-2xl">✅</span>
+                    {cargando ? 'Registrando...' : 'Sí, recibí mi pedido'}
+                  </button>
+
+                  <button
+                    onClick={() => registrarDecision('cancelado')}
+                    disabled={cargando}
+                    className="w-full bg-gradient-to-r from-red-500 to-rose-500 text-white py-5 rounded-xl font-bold text-lg hover:from-red-600 hover:to-rose-600 transition-all transform hover:scale-105 flex items-center justify-center gap-3 shadow-lg disabled:opacity-50 disabled:transform-none"
+                  >
+                    <span className="text-2xl">❌</span>
+                    {cargando ? 'Registrando...' : 'No recibí mi pedido'}
+                  </button>
+                </div>
+
+                <button
+                  onClick={reiniciar}
+                  disabled={cargando}
+                  className="w-full mt-6 text-gray-500 py-3 text-sm hover:text-orange-600 transition-colors font-medium"
+                >
+                  ← Volver
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // VISTA: Resultado
+      if (vista === 'resultado') {
+        if (decision === 'no_registrado') {
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-amber-50 flex items-center justify-center p-4">
+              <div className="max-w-md w-full">
+                <div className="bg-white rounded-3xl shadow-2xl p-8">
+                  <div className="text-center">
+                    <div className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-6 text-4xl">
+                      ⚠️
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                      Número no registrado
+                    </h2>
+                    <p className="text-gray-600 mb-6 leading-relaxed">
+                      El número <span className="font-semibold text-orange-600">{telefono}</span> no está registrado en Wimpy.
+                    </p>
+                    <div className="bg-orange-50 rounded-xl p-4 mb-6 border border-orange-200">
+                      <p className="text-sm text-gray-700">
+                        💡 <span className="font-semibold">¿Eres cliente nuevo?</span><br/>
+                        Contacta a Wimpy para registrar tu número y poder hacer pedidos.
+                      </p>
+                    </div>
+                    <button
+                      onClick={reiniciar}
+                      className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg"
+                    >
+                      Intentar nuevamente
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        const esAceptado = decision === 'aceptado';
+
+        return (
+          <div className={`min-h-screen ${esAceptado ? 'bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50' : 'bg-gradient-to-br from-red-50 via-orange-50 to-amber-50'} flex items-center justify-center p-4`}>
+            <div className="max-w-md w-full">
+              <div className="bg-white rounded-3xl shadow-2xl p-8">
+                <div className="text-center">
+                  <div className={`inline-flex items-center justify-center w-24 h-24 ${esAceptado ? 'bg-green-100' : 'bg-red-100'} rounded-full mb-6 animate-bounce text-5xl`}>
+                    {esAceptado ? '✅' : '❌'}
+                  </div>
+                  
+                  <h2 className="text-3xl font-bold text-gray-800 mb-3">
+                    {esAceptado ? '¡Perfecto! 🎉' : 'Entrega Cancelada'}
+                  </h2>
+                  
+                  <p className="text-gray-600 mb-6 leading-relaxed text-lg">
+                    {esAceptado 
+                      ? '¡Gracias por preferirnos! Tu confirmación ha sido enviada a Wimpy por WhatsApp. 🍔☕'
+                      : 'Tu reporte ha sido enviado a Wimpy. Nos pondremos en contacto contigo pronto.'}
+                  </p>
+                  
+                  <div className={`${esAceptado ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} rounded-xl p-5 mb-6 border-2 text-left`}>
+                    <p className="text-sm text-gray-700 mb-2">
+                      <span className="font-semibold">👤 Cliente:</span> {clienteValidado.nombre}
+                    </p>
+                    <p className="text-sm text-gray-700 mb-2">
+                      <span className="font-semibold">📱 Teléfono:</span> {clienteValidado.telefono}
+                    </p>
+                    <p className="text-sm text-gray-700 mb-2">
+                      <span className="font-semibold">📅 Fecha:</span> {new Date().toLocaleDateString('es-CO', {day: '2-digit', month: '2-digit', year: 'numeric'})}
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold">🕐 Hora:</span> {new Date().toLocaleTimeString('es-CO')}
+                    </p>
+                  </div>
+
+                  <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
+                    <p className="text-sm text-blue-800">
+                      📲 Se ha abierto WhatsApp para enviar la confirmación
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={reiniciar}
+                    className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg"
+                  >
+                    ✓ Finalizar
+                  </button>
+                </div>
+              </div>
+
+              <div className="text-center mt-6">
+                <p className="text-gray-500 text-sm font-medium">
+                  Wimpy Restaurante y Cafetería 🍔☕
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      return null;
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
 </html>

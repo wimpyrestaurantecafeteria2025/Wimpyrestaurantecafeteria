@@ -3,22 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Wimpy - Pedidos</title>
+  <title>Wimpy - v3 (Admin)</title>
   <style>
     :root{
-      --bg:#0b0b0c; --panel:#111214; --muted:#9aa0a6; --accent:#ff6b35; --accent-2:#ff9a57;
+      --bg:#0b0b0c; --panel:#0f1012; --muted:#9aa0a6; --accent:#ff6b35; --accent-2:#ff9a57;
       --card:#141416; --border:#232326; --white:#f5f5f5;
     }
+    *{box-sizing:border-box}
     html,body{height:100%;margin:0;font-family:Inter, system-ui, Arial, sans-serif;background:var(--bg);color:var(--white);}
-    header{padding:18px 16px;background:linear-gradient(90deg,#0f1720,#111827);display:flex;align-items:center;gap:12px;}
-    header h1{margin:0;font-size:1.15rem;font-weight:700;}
-    .container{max-width:980px;margin:18px auto;padding:12px;}
+    header{padding:14px;background:linear-gradient(90deg,#0f1720,#111827);display:flex;align-items:center;gap:12px;}
+    header .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(180deg,#ff8a4c,#ff6b35);display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+    header h1{margin:0;font-size:1.05rem;font-weight:700;}
+    .container{max-width:980px;margin:14px auto;padding:12px;}
     nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
-    .tab{background:var(--card);border:1px solid var(--border);padding:10px 12px;border-radius:10px;cursor:pointer;color:var(--white);}
-    .tab.active{box-shadow:0 4px 18px rgba(0,0,0,.5);border-color:rgba(255,255,255,.04);background:linear-gradient(180deg,#121214,#191a1c);}
+    .tab{background:transparent;border:1px solid transparent;padding:8px 12px;border-radius:10px;cursor:pointer;color:var(--white);border:1px solid var(--border);background:linear-gradient(180deg,#0d0d0e,#121214);}
+    .tab.hidden{display:none}
+    .tab.active{box-shadow:0 6px 18px rgba(0,0,0,.6);border-color:rgba(255,255,255,.04);}
     .panel{background:var(--panel);border:1px solid var(--border);padding:14px;border-radius:12px;}
     .grid{display:grid;gap:12px;}
-    .products .card, .clients .card, .orders .card{background:#0e0f10;border:1px solid #222;padding:12px;border-radius:10px;}
+    .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+    .card{background:#0e0f10;border:1px solid #222;padding:12px;border-radius:10px;}
     .product-row{display:flex;justify-content:space-between;align-items:center;gap:12px;}
     .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer;}
     .btn.ghost{background:transparent;border:1px solid #2a2a2a;color:var(--white);}
@@ -28,33 +32,46 @@
     .admin-floating{pointer-events:auto;background:#0b0b0d;border:1px solid #2b2b2b;padding:10px 14px;border-radius:999px;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.6);color:var(--white);}
     .cart{position:fixed;right:12px;bottom:12px;background:#0b0b0d;border-radius:12px;padding:10px;border:1px solid #222;min-width:240px;}
     .muted{color:var(--muted);font-size:.9rem;}
-    pre.note{white-space:pre-wrap;color:var(--muted);font-size:.95rem;background:transparent;border-radius:8px;}
-    @media (min-width:900px){ .grid.cols-3{grid-template-columns:repeat(3,1fr);} .grid.cols-2{grid-template-columns:repeat(2,1fr);} }
+    .badge{background:#111;padding:6px 8px;border-radius:8px;border:1px solid #222}
+    .search{display:flex;gap:8px}
+    .top-row{display:flex;gap:12px;align-items:center;justify-content:space-between}
+    @media (max-width:600px){ .grid.cols-3{grid-template-columns:repeat(1,1fr)} .grid.cols-2{grid-template-columns:repeat(1,1fr)} .cart{right:10px;left:10px} }
   </style>
 </head>
 <body>
   <header>
-    <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(180deg,#ff8a4c,#ff6b35);display:flex;align-items:center;justify-content:center;font-size:1.2rem">🍔</div>
-    <h1>Wimpy — Pedidos & Entregas</h1>
+    <div class="logo">🍔</div>
+    <h1>Wimpy — Pedidos & Entregas (v3)</h1>
   </header>
 
   <main class="container">
     <nav id="menu">
-      <div class="tab active" data-view="inicio">Inicio</div>
+      <!-- Para clientes visibles solo: Pedidos + Confirmar (el resto hidden hasta admin) -->
+      <div class="tab" data-view="inicio">Inicio</div>
       <div class="tab" data-view="pedidos">Pedidos</div>
-      <div class="tab" data-view="clientes">Clientes</div>
-      <div class="tab" data-view="productos">Productos</div>
-      <div class="tab" data-view="configuracion">Configuración</div>
-      <div class="tab" data-view="historial">Historial</div>
+      <div class="tab" data-view="confirmar">Confirmar entrega</div>
+
+      <!-- Admin only (hidden para clientes) -->
+      <div class="tab hidden" data-view="clientes">Clientes</div>
+      <div class="tab hidden" data-view="productos">Productos</div>
+      <div class="tab hidden" data-view="configuracion">Configuración</div>
+      <div class="tab hidden" data-view="historial">Historial</div>
+      <div class="tab hidden" data-view="dashboard">Dashboard</div>
     </nav>
 
     <section id="vista" class="panel">
-      <!-- Contenido dinámico aquí -->
+      <!-- INICIO -->
       <div id="inicioView">
-        <h2>Bienvenido a Wimpy</h2>
-        <p class="muted">Haz pedidos desde el menú o administra desde el panel. Usa el botón inferior para ingresar como administrador.</p>
+        <div class="top-row">
+          <div>
+            <h2>Bienvenido a Wimpy</h2>
+            <p class="muted">Haz tu pedido o confirma tu entrega. Si eres administrador usa el botón inferior para ingresar.</p>
+          </div>
+          <div class="badge">Modo: Cliente</div>
+        </div>
       </div>
 
+      <!-- PEDIDOS (Cliente) -->
       <div id="pedidosView" style="display:none;">
         <h2>Hacer pedido</h2>
         <div style="margin-bottom:12px;">
@@ -63,7 +80,12 @@
         </div>
 
         <div>
-          <h3>Menú</h3>
+          <div class="top-row"><h3>Menú</h3>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input id="searchProducto" placeholder="Buscar producto" style="padding:8px;border-radius:8px;border:1px solid #222;background:#0c0c0d;color:var(--white)"/>
+              <button class="btn small" id="btnRefrescarProductos">Refrescar</button>
+            </div>
+          </div>
           <div id="productosList" class="grid cols-3" style="margin-top:8px;"></div>
         </div>
 
@@ -71,27 +93,44 @@
           <h3>Tu carrito</h3>
           <div id="carritoList"></div>
           <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
-            <div class="muted">Total:</div><div id="totalAmount" style="font-weight:700">0</div>
+            <div class="muted">Total:</div><div id="totalAmount" style="font-weight:700">$ 0</div>
             <div style="flex:1"></div>
             <button class="btn" id="btnSendOrder">Enviar pedido (WhatsApp)</button>
           </div>
-          <p class="muted" style="margin-top:8px;">Nota: el pedido se registrará como <strong>Pendiente</strong> y deberá ser aprobado desde el panel admin.</p>
+          <p class="muted" style="margin-top:8px;">Nota: el pedido quedará como <strong>Pendiente</strong> hasta ser aprobado por el administrador.</p>
         </div>
       </div>
 
+      <!-- CONFIRMAR ENTREGA (Cliente) -->
+      <div id="confirmarView" style="display:none;">
+        <h2>Confirmar entrega</h2>
+        <p class="muted">Ingresa tu teléfono y confirma las entregas registradas a tu nombre.</p>
+        <div style="margin-top:10px">
+          <input id="inputTelefonoConfirm" placeholder="3118336562"/>
+        </div>
+        <div style="margin-top:10px" id="listaPendientesCliente"></div>
+      </div>
+
+      <!-- CLIENTES (Admin) -->
       <div id="clientesView" style="display:none;">
-        <h2>Clientes</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-          <input id="cliNombre" placeholder="Nombre completo" style="flex:1;min-width:220px"/>
-          <input id="cliTelefono" placeholder="Teléfono" style="width:220px"/>
+        <div class="top-row">
+          <h2>Clientes</h2>
+          <div><input id="filtroClienteSearch" placeholder="Buscar cliente..." /></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
+          <input id="cliNombre" placeholder="Nombre" style="flex:1;min-width:180px"/>
+          <input id="cliTelefono" placeholder="Teléfono" style="width:180px"/>
           <button class="btn small" id="btnAddCliente">Agregar cliente</button>
         </div>
         <div id="clientesList" class="grid cols-2"></div>
       </div>
 
+      <!-- PRODUCTOS (Admin) -->
       <div id="productosView" style="display:none;">
-        <h2>Productos</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <div class="top-row"><h2>Productos</h2>
+          <div><input id="filtroProducto" placeholder="Buscar producto..." /></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
           <input id="prodNombre" placeholder="Nombre producto" style="flex:1;min-width:180px"/>
           <input id="prodPrecio" placeholder="Precio entero (ej: 15000)" style="width:150px"/>
           <button class="btn small" id="btnAddProducto">Agregar producto</button>
@@ -99,17 +138,47 @@
         <div id="productosAdminList" class="grid cols-3"></div>
       </div>
 
+      <!-- CONFIGURACIÓN (Admin) -->
       <div id="configuracionView" style="display:none;">
         <h2>Configuración</h2>
         <label class="muted">Número de WhatsApp de Wimpy (sin +)</label>
         <input id="configNumero" />
-        <div style="margin-top:8px;"><button class="btn" id="btnGuardarConfig">Guardar</button></div>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button class="btn" id="btnGuardarConfig">Guardar</button>
+          <button class="btn ghost" id="btnReiniciarConfig">Revertir</button>
+        </div>
       </div>
 
+      <!-- HISTORIAL & APROBACIÓN (Admin) -->
       <div id="historialView" style="display:none;">
-        <h2>Historial</h2>
-        <div id="historialList" class="grid"></div>
+        <div class="top-row">
+          <h2>Pedidos pendientes / historial</h2>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="filtroEstado">
+              <option value="todos">Todos</option>
+              <option value="pendiente">Pendientes</option>
+              <option value="aprobado">Aprobados</option>
+              <option value="entregado">Entregados</option>
+            </select>
+            <input id="filtroSearchHist" placeholder="Buscar (tel, nombre, detalle)"/>
+            <button class="btn small" id="btnExportCsv">Exportar CSV</button>
+          </div>
+        </div>
+
+        <div id="historialList" style="margin-top:12px"></div>
       </div>
+
+      <!-- DASHBOARD (Admin) -->
+      <div id="dashboardView" style="display:none;">
+        <h2>Dashboard</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px">
+          <div class="card"><div class="muted">Pedidos totales</div><div id="statTotal" style="font-weight:800;font-size:1.4rem">0</div></div>
+          <div class="card"><div class="muted">Pendientes</div><div id="statPend" style="font-weight:800;font-size:1.4rem">0</div></div>
+          <div class="card"><div class="muted">Aprobados</div><div id="statAprob" style="font-weight:800;font-size:1.4rem">0</div></div>
+          <div class="card"><div class="muted">Entregados</div><div id="statEnt" style="font-weight:800;font-size:1.4rem">0</div></div>
+        </div>
+      </div>
+
     </section>
   </main>
 
@@ -127,279 +196,366 @@
   </footer>
 
   <script>
-    // URL del backend (tu Apps Script)
-    const GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec';
-    const ADMIN_PIN = '1995';
+  // ---------- CONFIG ----------
+  const GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec';
+  const ADMIN_PIN = '1995';
+  // ---------- STATE ----------
+  let productos = [], clientes = [], historial = [];
+  let carrito = [];
+  let numeroWimpy = '573118336562';
+  let isAdmin = false;
 
-    // Estado simple
-    let productos = [], clientes = [], historial = [];
-    let carrito = [];
-    let numeroWimpy = '573118336562';
+  // ---------- HELPERS ----------
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
+  function esc(t){ if(t===null||t===undefined) return ''; return String(t).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  async function fetchJSON(url){ const r = await fetch(url,{cache:'no-store'}); return await r.json().catch(()=>({})); }
 
-    // --- DOM ---
-    const tabs = document.querySelectorAll('.tab');
-    const views = {
-      inicio: document.getElementById('inicioView'),
-      pedidos: document.getElementById('pedidosView'),
-      clientes: document.getElementById('clientesView'),
-      productos: document.getElementById('productosView'),
-      configuracion: document.getElementById('configuracionView'),
-      historial: document.getElementById('historialView')
-    };
-    const productosList = document.getElementById('productosList');
-    const productosAdminList = document.getElementById('productosAdminList');
-    const clientesList = document.getElementById('clientesList');
-    const carritoList = document.getElementById('carritoList');
-    const miniCart = document.getElementById('miniCart');
-    const miniItems = document.getElementById('miniItems');
-    const totalAmount = document.getElementById('totalAmount');
-
-    // Tab switching
-    tabs.forEach(t => t.addEventListener('click', () => {
-      tabs.forEach(x => x.classList.remove('active'));
+  // ---------- NAV / VIEWS ----------
+  $$('.tab').forEach(t=>{
+    t.addEventListener('click', ()=> {
+      $$('.tab').forEach(x=>x.classList.remove('active'));
       t.classList.add('active');
       const view = t.dataset.view;
-      Object.values(views).forEach(v => v.style.display = 'none');
-      views[view].style.display = '';
-      if (view === 'pedidos') refreshProducts();
-      if (view === 'clientes') renderClientes();
-      if (view === 'productos') renderProductosAdmin();
-      if (view === 'historial') renderHistorial();
-      if (view === 'configuracion') document.getElementById('configNumero').value = numeroWimpy;
-    }));
-
-    // Initialize
-    (async function init(){
-      await cargarConfiguracion();
-      await cargarProductos();
-      await cargarClientes();
-      await cargarHistorial();
-      renderProducts();
-      renderProductosAdmin();
-      renderClientes();
-      updateCartUI();
-    })();
-
-    // --- Fetch helpers ---
-    async function fetchJSON(url){
-      const r = await fetch(url, {cache:'no-store'});
-      return await r.json();
-    }
-
-    // Config
-    async function cargarConfiguracion(){
-      try{
-        const res = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerConfiguracion');
-        if (res && res.success && res.numero) numeroWimpy = res.numero;
-      }catch(e){ console.warn('cfg',e); }
-    }
-    document.getElementById('btnGuardarConfig').addEventListener('click', async ()=>{
-      const val = document.getElementById('configNumero').value.trim();
-      if (!val) return alert('Ingresa número');
-      await fetchJSON(GOOGLE_SHEETS_API + `?action=guardarConfiguracion&numero=${encodeURIComponent(val)}`);
-      numeroWimpy = val;
-      alert('Guardado');
+      // hide all
+      ['inicio','pedidos','confirmar','clientes','productos','configuracion','historial','dashboard'].forEach(v=>{
+        const el = document.getElementById(v+'View');
+        if (el) el.style.display = (v===view ? '' : 'none');
+      });
+      // refresh content
+      if (view==='pedidos') renderProducts();
+      if (view==='clientes') renderClientes();
+      if (view==='productos') renderProductosAdmin();
+      if (view==='historial') renderHistorial();
+      if (view==='dashboard') renderDashboard();
+      if (view==='confirmar') renderPendientesCliente();
+      if (view==='configuracion') $('#configNumero').value = numeroWimpy;
     });
+  });
 
-    // Productos
-    async function cargarProductos(){
-      try{
-        const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerProductos');
-        if (r && r.success) productos = r.productos || [];
-      }catch(e){ console.warn('productos',e); productos = []; }
-    }
-    function renderProducts(){
-      productosList.innerHTML = '';
-      if (!productos.length){ productosList.innerHTML = '<div class="muted">No hay productos</div>'; return; }
-      productos.forEach(p=>{
-        const el = document.createElement('div'); el.className='card product-row';
-        el.innerHTML = `<div>
-          <div style="font-weight:700">${escapeHtml(p.nombre)}</div>
-          <div class="muted">$ ${Number(p.precio).toLocaleString('es-CO')}</div>
-        </div>
+  // ---------- INIT ----------
+  (async function init(){
+    await cargarConfiguracion();
+    await cargarProductos();
+    await cargarClientes();
+    await cargarHistorial();
+    renderProducts(); renderProductosAdmin(); renderClientes(); updateCartUI(); renderDashboard();
+    // default tab
+    document.querySelector('.tab[data-view="inicio"]').classList.add('active');
+  })();
+
+  // ---------- CARGA / CRUD ----------
+  async function cargarConfiguracion(){
+    try {
+      const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerConfiguracion');
+      if (r && r.success && r.numero) numeroWimpy = r.numero;
+    } catch(e){ console.warn(e); }
+  }
+  async function guardarConfiguracion(numero){
+    const r = await fetchJSON(GOOGLE_SHEETS_API + `?action=guardarConfiguracion&numero=${encodeURIComponent(numero)}`);
+    if (r && r.success){ numeroWimpy = numero; alert('Guardado'); }
+    else alert('Error guardando');
+  }
+
+  async function cargarProductos(){
+    try {
+      const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerProductos');
+      productos = (r && r.success) ? (r.productos||[]) : [];
+    } catch(e){ productos = []; }
+  }
+  async function cargarClientes(){
+    try {
+      const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerClientes');
+      clientes = (r && r.success) ? (r.clientes||[]) : [];
+    } catch(e){ clientes = []; }
+  }
+  async function cargarHistorial(){
+    try {
+      const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerHistorial');
+      historial = (r && r.success) ? (r.historial||[]) : [];
+    } catch(e){ historial = []; }
+  }
+
+  // ---------- RENDER PRODUCTOS (Cliente) ----------
+  function renderProducts(){
+    const q = $('#searchProducto').value.trim().toLowerCase();
+    const cont = $('#productosList'); cont.innerHTML = '';
+    const lista = productos.filter(p => (String(p.activo) === 'SI' || String(p.activo) === 'Si' || p.activo===true || p.activo=='true' || p.activo==='TRUE') );
+    const fil = lista.filter(p => !q || (p.nombre||'').toLowerCase().includes(q));
+    if (!fil.length){ cont.innerHTML = '<div class="muted">No hay productos</div>'; return; }
+    fil.forEach(p=>{
+      const el = document.createElement('div'); el.className='card product-row';
+      el.innerHTML = `<div><div style="font-weight:700">${esc(p.nombre)}</div><div class="muted">$ ${Number(p.precio).toLocaleString('es-CO')}</div></div>
+        <div><button class="btn small" data-id="${p.id}">Añadir</button></div>`;
+      cont.appendChild(el);
+    });
+    cont.querySelectorAll('button[data-id]').forEach(b=>{
+      b.addEventListener('click', ()=> {
+        const id = b.dataset.id;
+        const prod = productos.find(x=> String(x.id)===String(id));
+        if (prod) { addToCart(prod); }
+      });
+    });
+  }
+
+  // ---------- RENDER PRODUCTOS ADMIN ----------
+  function renderProductosAdmin(){
+    const q = $('#filtroProducto').value.trim().toLowerCase();
+    const cont = $('#productosAdminList'); cont.innerHTML = '';
+    const fil = productos.filter(p => !q || (p.nombre||'').toLowerCase().includes(q));
+    if (!fil.length){ cont.innerHTML = '<div class="muted">No hay productos</div>'; return; }
+    fil.forEach(p=>{
+      const el = document.createElement('div'); el.className='card';
+      el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-weight:700">${esc(p.nombre)}</div><div class="muted">$ ${Number(p.precio).toLocaleString('es-CO')}</div></div>
+        <div style="display:flex;gap:6px">
+          <button class="btn ghost small" data-del="${p.id}">Eliminar</button>
+        </div></div>`;
+      cont.appendChild(el);
+    });
+    cont.querySelectorAll('button[data-del]').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        const id = b.dataset.del;
+        if (!confirm('Eliminar producto?')) return;
+        await fetchJSON(GOOGLE_SHEETS_API + `?action=eliminarProducto&id=${encodeURIComponent(id)}`);
+        await cargarProductos(); renderProducts(); renderProductosAdmin();
+      });
+    });
+  }
+
+  // ---------- RENDER CLIENTES (ADMIN) ----------
+  function renderClientes(){
+    const q = $('#filtroClienteSearch').value.trim().toLowerCase();
+    const cont = $('#clientesList'); cont.innerHTML = '';
+    const fil = clientes.filter(c => !q || (c.nombre||'').toLowerCase().includes(q) || (c.telefono||'').includes(q));
+    if (!fil.length) { cont.innerHTML = '<div class="muted">No hay clientes</div>'; return; }
+    fil.forEach(c=>{
+      const el = document.createElement('div'); el.className='card';
+      el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-weight:700">${esc(c.nombre)}</div><div class="muted">${esc(c.telefono)}</div></div>
+      </div>`;
+      cont.appendChild(el);
+    });
+  }
+
+  // ---------- RENDER HISTORIAL (ADMIN) ----------
+  function renderHistorial(){
+    const estado = $('#filtroEstado').value;
+    const q = $('#filtroSearchHist').value.trim().toLowerCase();
+    const cont = $('#historialList'); cont.innerHTML = '';
+    let items = historial.slice().reverse();
+    if (estado !== 'todos') items = items.filter(h => (h.estado||'').toLowerCase() === estado);
+    if (q) items = items.filter(h => (h.telefono||'').includes(q) || (h.nombre||'').toLowerCase().includes(q) || (h.detalle||'').toLowerCase().includes(q));
+    if (!items.length){ cont.innerHTML = '<div class="muted">Sin registros</div>'; return; }
+    items.forEach(h=>{
+      const el = document.createElement('div'); el.className='card';
+      el.innerHTML = `<div style="display:flex;justify-content:space-between">
         <div>
-          <button class="btn small" data-id="${p.id}">Añadir</button>
-        </div>`;
-        productosList.appendChild(el);
-      });
-      // add handlers
-      productosList.querySelectorAll('button[data-id]').forEach(b=>{
-        b.addEventListener('click', () => {
-          const id = b.dataset.id;
-          const prod = productos.find(x=> String(x.id) === String(id));
-          if (prod) addToCart(prod);
-        });
-      });
-    }
-    function renderProductosAdmin(){
-      productosAdminList.innerHTML = '';
-      if (!productos.length) { productosAdminList.innerHTML = '<div class="muted">No hay productos</div>'; return; }
-      productos.forEach(p=>{
-        const el = document.createElement('div'); el.className='card';
-        el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="font-weight:700">${escapeHtml(p.nombre)}</div>
-            <div class="muted">$ ${Number(p.precio).toLocaleString('es-CO')}</div>
-          </div>
-          <div style="display:flex;gap:6px">
-            <button class="btn ghost small" data-del="${p.id}">Eliminar</button>
-          </div>
-        </div>`;
-        productosAdminList.appendChild(el);
-      });
-      productosAdminList.querySelectorAll('button[data-del]').forEach(b=>{
-        b.addEventListener('click', async ()=> {
-          const id = b.dataset.del;
-          if (!confirm('Eliminar producto?')) return;
-          await fetchJSON(GOOGLE_SHEETS_API + `?action=eliminarProducto&id=${encodeURIComponent(id)}`);
-          await cargarProductos(); renderProducts(); renderProductosAdmin();
-        });
-      });
-    }
-    document.getElementById('btnAddProducto').addEventListener('click', async ()=>{
-      const nombre = document.getElementById('prodNombre').value.trim();
-      const precioRaw = document.getElementById('prodPrecio').value.trim();
-      const precio = parseInt(precioRaw,10);
-      if (!nombre || isNaN(precio)) return alert('Nombre y precio entero requerido');
-      await fetchJSON(GOOGLE_SHEETS_API + `?action=agregarProducto&nombre=${encodeURIComponent(nombre)}&precio=${encodeURIComponent(precio)}`);
-      document.getElementById('prodNombre').value=''; document.getElementById('prodPrecio').value='';
-      await cargarProductos(); renderProducts(); renderProductosAdmin();
-    });
-
-    // Clientes
-    async function cargarClientes(){
-      try{
-        const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerClientes');
-        if (r && r.success) clientes = r.clientes || [];
-      }catch(e){ clientes=[]; }
-    }
-    function renderClientes(){
-      clientesList.innerHTML = '';
-      if (!clientes.length) { clientesList.innerHTML = '<div class="muted">No hay clientes</div>'; return; }
-      clientes.forEach(c=>{
-        const el = document.createElement('div'); el.className='card';
-        el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-          <div><div style="font-weight:700">${escapeHtml(c.nombre)}</div><div class="muted">${escapeHtml(c.telefono)}</div></div>
-        </div>`;
-        clientesList.appendChild(el);
-      });
-    }
-    document.getElementById('btnAddCliente').addEventListener('click', async ()=> {
-      const nombre = document.getElementById('cliNombre').value.trim();
-      const telefono = document.getElementById('cliTelefono').value.trim();
-      if (!nombre || !telefono) return alert('Completa nombre y teléfono');
-      await fetchJSON(GOOGLE_SHEETS_API + `?action=agregarCliente&telefono=${encodeURIComponent(telefono)}&nombre=${encodeURIComponent(nombre)}&email=`);
-      document.getElementById('cliNombre').value=''; document.getElementById('cliTelefono').value='';
-      await cargarClientes(); renderClientes();
-    });
-
-    // Historial (para admin y lista)
-    async function cargarHistorial(){
-      try{
-        const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerHistorial');
-        if (r && r.success) historial = r.historial || [];
-      }catch(e){ historial=[]; }
-    }
-    function renderHistorial(){
-      const node = document.getElementById('historialList');
-      node.innerHTML = '';
-      if (!historial.length) { node.innerHTML = '<div class="muted">Sin registros</div>'; return; }
-      historial.slice().reverse().forEach(h=>{
-        const el = document.createElement('div'); el.className='card';
-        el.innerHTML = `<div style="display:flex;justify-content:space-between"><div>
-          <div style="font-weight:700">${escapeHtml(h.nombre || h.telefono)}</div>
-          <div class="muted">${escapeHtml(h.fecha || '')} ${escapeHtml(h.hora || '')}</div>
-          <div style="margin-top:6px">${escapeHtml(h.detalle || '')}</div>
+          <div style="font-weight:700">${esc(h.nombre || h.telefono)}</div>
+          <div class="muted">${esc(h.fecha || '')} ${esc(h.hora||'')}</div>
+          <div style="margin-top:6px">${esc(h.detalle||'')}</div>
           <div class="muted" style="margin-top:6px">Total: $${Number(h.total||0).toLocaleString('es-CO')}</div>
         </div>
         <div style="text-align:right">
-          <div class="muted">${escapeHtml(h.estado||'')}</div>
-        </div></div>`;
-        node.appendChild(el);
+          <div class="muted">${esc(h.estado||'')}</div>
+          <div style="margin-top:8px"><button class="btn small" data-approve="${h.timestamp}">Aprobar</button>
+          <button class="btn ghost small" data-ent="${h.timestamp}">Confirmar entrega</button>
+          <button class="btn ghost small" data-invoice="${h.timestamp}">Cuenta (PDF)</button></div>
+        </div>
+      </div>`;
+      cont.appendChild(el);
+    });
+    // handlers
+    cont.querySelectorAll('button[data-approve]').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        const ts = b.dataset.approve;
+        if (!confirm('Aprobar pedido?')) return;
+        const res = await fetchJSON(GOOGLE_SHEETS_API + `?action=aprobarPedido&timestamp=${encodeURIComponent(ts)}`);
+        if (res && res.success){ await cargarHistorial(); renderHistorial(); renderDashboard(); alert('Pedido aprobado'); }
+        else alert('Error');
       });
-    }
-
-    // Carrito UI
-    function addToCart(prod){
-      const found = carrito.find(i=> String(i.id)===String(prod.id));
-      if (found) found.cantidad++;
-      else carrito.push({ id:prod.id, nombre:prod.nombre, precio:parseInt(prod.precio,10), cantidad:1 });
-      updateCartUI();
-    }
-    function updateCartUI(){
-      // list
-      carritoList.innerHTML = '';
-      miniItems.innerHTML = '';
-      let total = 0;
-      if (!carrito.length) { carritoList.innerHTML = '<div class="muted">Carrito vacío</div>'; miniCart.style.display='none'; }
-      else {
-        carrito.forEach(i=>{
-          total += i.precio * i.cantidad;
-          const row = document.createElement('div');
-          row.style.display='flex'; row.style.justifyContent='space-between'; row.style.gap='8px'; row.style.alignItems='center';
-          row.innerHTML = `<div>${escapeHtml(i.nombre)} <span class="muted">x${i.cantidad}</span></div><div>$${Number(i.precio*i.cantidad).toLocaleString('es-CO')}</div>`;
-          carritoList.appendChild(row);
-          const mini = document.createElement('div'); mini.style.marginBottom='6px'; mini.textContent = `${i.nombre} x${i.cantidad} — $${Number(i.precio*i.cantidad).toLocaleString('es-CO')}`;
-          miniItems.appendChild(mini);
-        });
-        miniCart.style.display = '';
-      }
-      totalAmount.textContent = `$ ${Number(total).toLocaleString('es-CO')}`;
-    }
-    document.getElementById('btnClearCart').addEventListener('click', ()=>{ carrito=[]; updateCartUI(); });
-    document.getElementById('btnOpenPedidos').addEventListener('click', ()=> {
-      document.querySelector('.tab[data-view="pedidos"]').click();
     });
-
-    // Enviar pedido (registra como Pendiente)
-    document.getElementById('btnSendOrder').addEventListener('click', async ()=>{
-      const telefono = document.getElementById('inputTelefono').value.trim();
-      if (!telefono) return alert('Ingresa tu teléfono');
-      if (!carrito.length) return alert('Carrito vacío');
-      const detalle = carrito.map(i=> `${i.cantidad} x ${i.nombre}`).join(', ');
-      const total = carrito.reduce((s,i)=> s + (i.precio * i.cantidad), 0);
-      // registrar pedido (se agregará en Historial con estado "Pendiente")
-      const url = `${GOOGLE_SHEETS_API}?action=registrarPedido&nombre=${encodeURIComponent('Cliente')}&telefono=${encodeURIComponent(telefono)}&detalle=${encodeURIComponent(detalle)}&total=${encodeURIComponent(total)}`;
-      const res = await fetch(url);
-      const json = await res.json();
-      if (json && json.success){
-        // abrir whatsapp para notificar
-        const waNumero = numeroWimpy.replace(/\+/g,'').replace(/\s+/g,'');
-        const msg = encodeURIComponent(`Nuevo pedido\nTel: ${telefono}\nPedido: ${detalle}\nTotal: $${Number(total).toLocaleString('es-CO')}`);
-        const waUrl = `https://wa.me/${waNumero}?text=${msg}`;
-        window.open(waUrl,'_blank');
-        alert('Pedido enviado. Quedó como PENDIENTE para aprobación del admin.');
-        carrito = []; updateCartUI();
-        await cargarHistorial(); // actualizar vista historial
-      } else {
-        alert('Error registrando pedido');
-      }
+    cont.querySelectorAll('button[data-ent]').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        const ts = b.dataset.ent;
+        if (!confirm('Marcar como entregado?')) return;
+        const res = await fetchJSON(GOOGLE_SHEETS_API + `?action=confirmarEntrega&timestamp=${encodeURIComponent(ts)}`);
+        if (res && res.success){ await cargarHistorial(); renderHistorial(); renderDashboard(); alert('Entrega confirmada'); }
+        else alert('Error');
+      });
     });
-
-    // Admin access (floating button bottom)
-    document.getElementById('adminBtn').addEventListener('click', ()=>{
-      const pin = prompt('Ingrese PIN administrador:');
-      if (pin === ADMIN_PIN){
-        alert('Acceso admin concedido');
-        // activar una vista simple de administración en la pestaña Productos / Historial
-        // saltar a vista historial
-        document.querySelector('.tab[data-view="historial"]').click();
-        // mostrar aviso con instrucciones para aprobar
-        setTimeout(()=> alert('En el historial aparecen pedidos. Para aprobar un pedido, edite la hoja "Historial" desde Google Sheets (columna Estado). Si deseas, puedo agregar la función para aprobar desde esta interfaz.'), 300);
-      } else {
-        alert('PIN incorrecto');
-      }
+    cont.querySelectorAll('button[data-invoice]').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        const ts = b.dataset.invoice;
+        const email = prompt('Enviar por correo a (email) o dejar vacío para solo descargar:');
+        const res = await fetchJSON(GOOGLE_SHEETS_API + `?action=generarCuentaCobro&timestamp=${encodeURIComponent(ts)}&enviarEmail=${encodeURIComponent(email||'')}`);
+        if (res && res.success) alert('Cuenta de cobro generada y ' + (email? 'enviada' : 'listo, descarga en Drive'));
+        else alert('Error generando cuenta');
+      });
     });
+  }
 
-    // Utility
-    function escapeHtml(text){
-      if (!text && text !== 0) return '';
-      return String(text).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]); });
+  // ---------- RENDER DASHBOARD ----------
+  function renderDashboard(){
+    const total = historial.length;
+    const pend = historial.filter(h=> (h.estado||'').toLowerCase()==='pendiente').length;
+    const apro = historial.filter(h=> (h.estado||'').toLowerCase()==='aprobado').length;
+    const ent = historial.filter(h=> (h.estado||'').toLowerCase()==='entregado').length;
+    $('#statTotal').textContent = total;
+    $('#statPend').textContent = pend;
+    $('#statAprob').textContent = apro;
+    $('#statEnt').textContent = ent;
+    $('#menu .badge')?.textContent && ($('#menu .badge').textContent = isAdmin ? 'Modo: Admin' : 'Modo: Cliente');
+  }
+
+  // ---------- CARRITO ----------
+  function addToCart(prod){
+    const found = carrito.find(i=> String(i.id)===String(prod.id));
+    if (found) found.cantidad++;
+    else carrito.push({ id:prod.id, nombre:prod.nombre, precio:parseInt(prod.precio,10), cantidad:1 });
+    updateCartUI();
+  }
+  function updateCartUI(){
+    const list = $('#carritoList'); list.innerHTML=''; $('#miniItems').innerHTML='';
+    let total = 0;
+    if (!carrito.length){ list.innerHTML = '<div class="muted">Carrito vacío</div>'; $('#miniCart').style.display='none'; }
+    else {
+      carrito.forEach(i=>{
+        total += i.precio * i.cantidad;
+        const row = document.createElement('div');
+        row.style.display='flex'; row.style.justifyContent='space-between'; row.style.gap='8px'; row.style.alignItems='center'; row.style.marginBottom='8px';
+        row.innerHTML = `<div>${esc(i.nombre)} <span class="muted">x${i.cantidad}</span></div><div>$${Number(i.precio*i.cantidad).toLocaleString('es-CO')}</div>`;
+        list.appendChild(row);
+        const mini = document.createElement('div'); mini.style.marginBottom='6px'; mini.textContent = `${i.nombre} x${i.cantidad} — $${Number(i.precio*i.cantidad).toLocaleString('es-CO')}`;
+        $('#miniItems').appendChild(mini);
+      });
+      $('#miniCart').style.display = '';
     }
+    $('#totalAmount').textContent = `$ ${Number(total).toLocaleString('es-CO')}`;
+  }
+  $('#btnClearCart').addEventListener('click', ()=>{ carrito=[]; updateCartUI(); });
+  $('#btnOpenPedidos').addEventListener('click', ()=> document.querySelector('.tab[data-view="pedidos"]').click());
+  $('#btnRefrescarProductos').addEventListener('click', async ()=>{ await cargarProductos(); renderProducts(); });
 
-    // small helpers to refresh lists
-    async function refreshProducts(){ await cargarProductos(); renderProducts(); }
-    async function refreshClients(){ await cargarClientes(); renderClientes(); }
+  // ---------- ENVIAR PEDIDO (Cliente) ----------
+  $('#btnSendOrder').addEventListener('click', async ()=>{
+    const telefono = $('#inputTelefono').value.trim();
+    if (!telefono) return alert('Ingresa tu teléfono');
+    if (!carrito.length) return alert('Carrito vacío');
+    // validar precios enteros
+    if (carrito.some(i=> !Number.isInteger(i.precio))) return alert('Precio inválido en items');
+    const detalle = carrito.map(i=> `${i.cantidad} x ${i.nombre}`).join(', ');
+    const total = carrito.reduce((s,i)=> s + (i.precio * i.cantidad), 0);
+    // registrar pedido (pendiente)
+    const url = `${GOOGLE_SHEETS_API}?action=registrarPedido&nombre=${encodeURIComponent('Cliente')}&telefono=${encodeURIComponent(telefono)}&detalle=${encodeURIComponent(detalle)}&total=${encodeURIComponent(total)}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if (json && json.success){
+      // notificar a Wimpy por WhatsApp
+      const waNumero = numeroWimpy.replace(/\+/g,'').replace(/\s+/g,'');
+      const msg = encodeURIComponent(`Nuevo pedido\nTel: ${telefono}\nPedido: ${detalle}\nTotal: $${Number(total).toLocaleString('es-CO')}`);
+      window.open(`https://wa.me/${waNumero}?text=${msg}`,'_blank');
+      alert('Pedido enviado. Quedó como PENDIENTE para aprobación del admin.');
+      carrito = []; updateCartUI(); await cargarHistorial();
+    } else {
+      alert('Error registrando pedido');
+    }
+  });
+
+  // ---------- CLIENTE: CONFIRMAR ENTREGA ----------
+  async function renderPendientesCliente(){
+    $('#listaPendientesCliente').innerHTML = '';
+    const tel = $('#inputTelefonoConfirm').value.trim();
+    if (!tel) { $('#listaPendientesCliente').innerHTML = '<div class="muted">Ingresa tu teléfono arriba</div>'; return; }
+    const lista = historial.filter(h => (h.telefono||'').includes(tel) && (h.estado||'').toLowerCase()==='aprobado');
+    if (!lista.length) { $('#listaPendientesCliente').innerHTML = '<div class="muted">No tienes entregas pendientes aprobadas.</div>'; return; }
+    lista.forEach(h=>{
+      const el = document.createElement('div'); el.className='card';
+      el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-weight:700">${esc(h.detalle)}</div><div class="muted">Total: $${Number(h.total||0).toLocaleString('es-CO')}</div></div>
+        <div><button class="btn small" data-confirm="${h.timestamp}">Confirmar entrega</button></div>
+      </div>`;
+      $('#listaPendientesCliente').appendChild(el);
+    });
+    $('#listaPendientesCliente').querySelectorAll('button[data-confirm]').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        const ts = b.dataset.confirm;
+        if (!confirm('Confirmar que recibiste el pedido?')) return;
+        const res = await fetchJSON(GOOGLE_SHEETS_API + `?action=confirmarEntrega&timestamp=${encodeURIComponent(ts)}`);
+        if (res && res.success){ alert('Entrega confirmada. Gracias.'); await cargarHistorial(); renderPendientesCliente(); renderDashboard(); }
+        else alert('Error');
+      });
+    });
+  }
+  $('#inputTelefonoConfirm').addEventListener('change', renderPendientesCliente);
+
+  // ---------- AGREGAR CLIENTE (ADMIN) ----------
+  $('#btnAddCliente').addEventListener('click', async ()=>{
+    if (!isAdmin) return alert('Acceso admin requerido');
+    const nombre = $('#cliNombre').value.trim(); const telefono = $('#cliTelefono').value.trim();
+    if (!nombre || !telefono) return alert('Completa nombre y teléfono');
+    const res = await fetchJSON(GOOGLE_SHEETS_API + `?action=agregarCliente&telefono=${encodeURIComponent(telefono)}&nombre=${encodeURIComponent(nombre)}&email=`);
+    if (res && res.success){ $('#cliNombre').value=''; $('#cliTelefono').value=''; await cargarClientes(); renderClientes(); alert('Cliente agregado'); }
+    else alert('Error');
+  });
+
+  // ---------- AGREGAR PRODUCTO ----------
+  $('#btnAddProducto').addEventListener('click', async ()=>{
+    if (!isAdmin) return alert('Acceso admin requerido');
+    const nombre = $('#prodNombre').value.trim(); const precioRaw = $('#prodPrecio').value.trim();
+    const precio = parseInt(precioRaw,10);
+    if (!nombre || isNaN(precio)) return alert('Nombre y precio entero requerido');
+    const res = await fetchJSON(GOOGLE_SHEETS_API + `?action=agregarProducto&nombre=${encodeURIComponent(nombre)}&precio=${encodeURIComponent(precio)}`);
+    if (res && res.success){ $('#prodNombre').value=''; $('#prodPrecio').value=''; await cargarProductos(); renderProducts(); renderProductosAdmin(); alert('Producto agregado'); }
+    else alert('Error');
+  });
+
+  // ---------- ADMIN: ACCESS ----------
+  $('#adminBtn').addEventListener('click', ()=>{
+    const pin = prompt('Ingrese PIN administrador:');
+    if (pin === ADMIN_PIN){
+      isAdmin = true;
+      $$('.tab.hidden').forEach(x=> x.classList.remove('hidden'));
+      alert('Acceso admin concedido'); document.querySelector('.tab[data-view="dashboard"]').click();
+    } else alert('PIN incorrecto');
+  });
+
+  // ---------- CONFIG GUARDAR ----------
+  $('#btnGuardarConfig').addEventListener('click', async ()=>{
+    if (!isAdmin) return alert('Acceso admin requerido');
+    const val = $('#configNumero').value.trim();
+    if (!val) return alert('Ingresa número');
+    await guardarConfiguracion(val); await cargarConfiguracion();
+  });
+  $('#btnReiniciarConfig').addEventListener('click', async ()=>{ await cargarConfiguracion(); $('#configNumero').value = numeroWimpy; alert('Restaurado'); });
+
+  // ---------- HISTORIAL: EXPORT CSV ----------
+  $('#btnExportCsv').addEventListener('click', ()=>{
+    if (!isAdmin) return alert('Acceso admin requerido');
+    const csvRows = [['fecha','hora','telefono','nombre','detalle','total','estado']];
+    historial.forEach(h=> csvRows.push([h.fecha, h.hora, h.telefono, h.nombre, '"'+(h.detalle||'')+'"', h.total, h.estado]));
+    const csv = csvRows.map(r=> r.join(',')).join('\\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'historial_wimpy.csv'; a.click(); URL.revokeObjectURL(url);
+  });
+
+  // ---------- DASHBOARD REFRESH & SEARCH HANDLERS ----------
+  $('#filtroEstado').addEventListener('change', renderHistorial);
+  $('#filtroSearchHist').addEventListener('input', renderHistorial);
+  $('#filtroProducto').addEventListener('input', renderProductosAdmin);
+  $('#filtroClienteSearch').addEventListener('input', renderClientes);
+  $('#searchProducto').addEventListener('input', renderProducts);
+
+  // ---------- UTILS ----------
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  // ---------- RELOADS (background simple) ----------
+  // cada 60s actualiza historial/productos (opcional)
+  setInterval(async ()=>{
+    await cargarHistorial(); await cargarProductos(); renderProducts(); renderHistorial(); renderDashboard();
+  }, 60000);
+
   </script>
 </body>
 </html>

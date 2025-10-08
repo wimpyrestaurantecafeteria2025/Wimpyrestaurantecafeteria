@@ -1,108 +1,405 @@
-
 <!DOCTYPE html>
 <html lang="es">
-<cabeza>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="ancho=ancho-del-dispositivo, escala-inicial=1.0">
-  Aplicación Wimpy - Pedidos
-  <estilo>
-    cuerpo { familia de fuentes: Arial, sans-serif; color de fondo: #121212; color: #e0e0e0; margen: 0; relleno: 0; }
-    encabezado { color de fondo: #1f1f1f; relleno: 15px; alineación del texto: centro; tamaño de fuente: 1.4em; color: #fff; }
-    nav { display: flex; justify-content: space-around; background-color: #1f1f1f; padding: 10px; position: sticky; top: 0; }
-    botón de navegación { color de fondo: #333; color: #fff; borde: ninguno; relleno: 8px 12px; radio del borde: 8px; cursor: puntero; }
-    botón de navegación:hover { background-color: #555; }
-    sección { relleno: 15px; }
-    .oculto { display: ninguno; }
-    .admin-btn { posición: fija; inferior: 10px; derecha: 10px; fondo: #007bff; color: blanco; relleno: 12px; borde: ninguno; radio del borde: 50%; tamaño de fuente: 1.2em; cursor: puntero; }
-    .admin-panel { color de fondo: #1f1f1f; radio del borde: 10px; relleno: 15px; margen: 15px 0; }
-    entrada, seleccionar { ancho: 100%; relleno: 8px; margen: 6px 0; radio del borde: 5px; borde: 1px sólido #555; fondo: #2b2b2b; color: #fff; }
-    tabla { ancho: 100%; colapso del borde: colapsar; margen superior: 10px; }
-    th, td { borde: 1px sólido #444; relleno: 8px; alineación del texto: izquierda; }
-    th { color de fondo: #333; }
-    .btn { color de fondo: #007bff; borde: ninguno; color: blanco; relleno: 8px 12px; radio del borde: 5px; cursor: puntero; }
-    .btn:hover { color de fondo: #0056b3; }
-  </estilo>
-</cabeza>
-<cuerpo>
-<header>ðŸ ” Aplicación Wimpy</header>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Wimpy - Pedidos</title>
+  <style>
+    :root{
+      --bg:#0b0b0c; --panel:#111214; --muted:#9aa0a6; --accent:#ff6b35; --accent-2:#ff9a57;
+      --card:#141416; --border:#232326; --white:#f5f5f5;
+    }
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, Arial, sans-serif;background:var(--bg);color:var(--white);}
+    header{padding:18px 16px;background:linear-gradient(90deg,#0f1720,#111827);display:flex;align-items:center;gap:12px;}
+    header h1{margin:0;font-size:1.15rem;font-weight:700;}
+    .container{max-width:980px;margin:18px auto;padding:12px;}
+    nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+    .tab{background:var(--card);border:1px solid var(--border);padding:10px 12px;border-radius:10px;cursor:pointer;color:var(--white);}
+    .tab.active{box-shadow:0 4px 18px rgba(0,0,0,.5);border-color:rgba(255,255,255,.04);background:linear-gradient(180deg,#121214,#191a1c);}
+    .panel{background:var(--panel);border:1px solid var(--border);padding:14px;border-radius:12px;}
+    .grid{display:grid;gap:12px;}
+    .products .card, .clients .card, .orders .card{background:#0e0f10;border:1px solid #222;padding:12px;border-radius:10px;}
+    .product-row{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+    .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer;}
+    .btn.ghost{background:transparent;border:1px solid #2a2a2a;color:var(--white);}
+    .small{padding:6px 8px;font-size:.9rem;}
+    input,select,textarea{background:#0c0c0d;color:var(--white);border:1px solid #222;padding:8px;border-radius:8px;width:100%;}
+    footer{position:fixed;bottom:12px;left:12px;right:12px;display:flex;justify-content:center;pointer-events:none;}
+    .admin-floating{pointer-events:auto;background:#0b0b0d;border:1px solid #2b2b2b;padding:10px 14px;border-radius:999px;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.6);color:var(--white);}
+    .cart{position:fixed;right:12px;bottom:12px;background:#0b0b0d;border-radius:12px;padding:10px;border:1px solid #222;min-width:240px;}
+    .muted{color:var(--muted);font-size:.9rem;}
+    pre.note{white-space:pre-wrap;color:var(--muted);font-size:.95rem;background:transparent;border-radius:8px;}
+    @media (min-width:900px){ .grid.cols-3{grid-template-columns:repeat(3,1fr);} .grid.cols-2{grid-template-columns:repeat(2,1fr);} }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(180deg,#ff8a4c,#ff6b35);display:flex;align-items:center;justify-content:center;font-size:1.2rem">🍔</div>
+    <h1>Wimpy — Pedidos & Entregas</h1>
+  </header>
 
-<navegación>
-  <button onclick="mostrar('inicio')">Inicio</button>
-  <button onclick="mostrar('pedidos')">Pedidos</button>
-  <button onclick="mostrar('clientes')">Clientes</button>
-  <button onclick="mostrar('productos')">Productos</button>
-  <button onclick="mostrar('configuracion')">Configuración</button>
-  <botón onclick="mostrar('historial')">Historial</botón>
-</nav>
+  <main class="container">
+    <nav id="menu">
+      <div class="tab active" data-view="inicio">Inicio</div>
+      <div class="tab" data-view="pedidos">Pedidos</div>
+      <div class="tab" data-view="clientes">Clientes</div>
+      <div class="tab" data-view="productos">Productos</div>
+      <div class="tab" data-view="configuracion">Configuración</div>
+      <div class="tab" data-view="historial">Historial</div>
+    </nav>
 
-<section id="inicio">
-  Bienvenido a Wimpy
-  <p>Administra tus pedidos, clientes y productos de forma rápida y segura.</p>
-</sección>
+    <section id="vista" class="panel">
+      <!-- Contenido dinámico aquí -->
+      <div id="inicioView">
+        <h2>Bienvenido a Wimpy</h2>
+        <p class="muted">Haz pedidos desde el menú o administra desde el panel. Usa el botón inferior para ingresar como administrador.</p>
+      </div>
 
-<sección id="pedidos" class="oculto">
-  Pedidos
-  <p>Los clientes pueden enviar sus pedidos por WhatsApp.</p>
-  <button class="btn" onclick="enviarWhatsApp()">Enviar pedido</button>
-</sección>
+      <div id="pedidosView" style="display:none;">
+        <h2>Hacer pedido</h2>
+        <div style="margin-bottom:12px;">
+          <label class="muted">Tu teléfono (ej: 3118336562)</label>
+          <input id="inputTelefono" placeholder="3118336562"/>
+        </div>
 
-<sección id="clientes" class="oculto">
-  Clientes
-  <div id="listaClientes">Cargando...</div>
-</sección>
+        <div>
+          <h3>Menú</h3>
+          <div id="productosList" class="grid cols-3" style="margin-top:8px;"></div>
+        </div>
 
-<sección id="productos" class="oculto">
-  Productos
-  <div id="listaProductos">Cargando...</div>
-</sección>
+        <div style="margin-top:12px;">
+          <h3>Tu carrito</h3>
+          <div id="carritoList"></div>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+            <div class="muted">Total:</div><div id="totalAmount" style="font-weight:700">0</div>
+            <div style="flex:1"></div>
+            <button class="btn" id="btnSendOrder">Enviar pedido (WhatsApp)</button>
+          </div>
+          <p class="muted" style="margin-top:8px;">Nota: el pedido se registrará como <strong>Pendiente</strong> y deberá ser aprobado desde el panel admin.</p>
+        </div>
+      </div>
 
-<sección id="configuracion" class="oculto">
-  <h2>Configuración</h2>
-  <label>Número de WhatsApp:</label>
-  <input type="text" id="numeroWimpy" value="573118336562" />
-  <button class="btn" onclick="guardarConfiguracion()">Guardar</button>
-</sección>
+      <div id="clientesView" style="display:none;">
+        <h2>Clientes</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+          <input id="cliNombre" placeholder="Nombre completo" style="flex:1;min-width:220px"/>
+          <input id="cliTelefono" placeholder="Teléfono" style="width:220px"/>
+          <button class="btn small" id="btnAddCliente">Agregar cliente</button>
+        </div>
+        <div id="clientesList" class="grid cols-2"></div>
+      </div>
 
-<section id="historial" class="oculto">
-  <h2>Historial de pedidos</h2>
-  <div id="tablaHistorial">Cargando...</div>
-</sección>
+      <div id="productosView" style="display:none;">
+        <h2>Productos</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+          <input id="prodNombre" placeholder="Nombre producto" style="flex:1;min-width:180px"/>
+          <input id="prodPrecio" placeholder="Precio entero (ej: 15000)" style="width:150px"/>
+          <button class="btn small" id="btnAddProducto">Agregar producto</button>
+        </div>
+        <div id="productosAdminList" class="grid cols-3"></div>
+      </div>
 
-<button class="admin-btn" onclick="accederAdmin()">ðŸ”'</button>
+      <div id="configuracionView" style="display:none;">
+        <h2>Configuración</h2>
+        <label class="muted">Número de WhatsApp de Wimpy (sin +)</label>
+        <input id="configNumero" />
+        <div style="margin-top:8px;"><button class="btn" id="btnGuardarConfig">Guardar</button></div>
+      </div>
 
-<guión>
-constante GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec';
-deje que adminAcceso = false;
+      <div id="historialView" style="display:none;">
+        <h2>Historial</h2>
+        <div id="historialList" class="grid"></div>
+      </div>
+    </section>
+  </main>
 
-función mostrar(sección) {
-  document.querySelectorAll('sección').forEach(s => s.classList.add('oculto'));
-  document.getElementById(seccion).classList.remove('oculto');
-}
+  <div class="cart" id="miniCart" style="display:none;">
+    <div style="font-weight:700;margin-bottom:6px">Carrito</div>
+    <div id="miniItems" style="max-height:180px;overflow:auto"></div>
+    <div style="margin-top:8px;display:flex;gap:8px;">
+      <button class="btn small" id="btnOpenPedidos">Abrir</button>
+      <button class="btn ghost small" id="btnClearCart">Vaciar</button>
+    </div>
+  </div>
 
-función accederAdmin() {
-  const pin = Prompt("Ingrese el PIN de administrador:");
-  si (pin === "1995") {
-    adminAcceso = true;
-    alert("Acceso concedido âœ...");
-  } demás {
-    alert("PIN incorrecto â Œ");
-  }
-}
+  <footer>
+    <button class="admin-floating" id="adminBtn">🔒 Admin</button>
+  </footer>
 
-función asíncrona guardarConfiguracion() {
-  if (!adminAcceso) return alert("Acceso restringido");
-  const numero = document.getElementById("numeroWimpy").value.trim();
-  esperar fetch(`${GOOGLE_SHEETS_API}?action=guardarConfiguracion&numero=${numero}`);
-  alert("Configuración guardada");
-}
+  <script>
+    // URL del backend (tu Apps Script)
+    const GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec';
+    const ADMIN_PIN = '1995';
 
-función enviarWhatsApp() {
-  const numero = document.getElementById("numeroWimpy").value.trim();
-  const mensaje = encodeURIComponent("Hola, quiero hacer un pedido en Wimpy ðŸ ”");
-  ventana.open(`https://wa.me/${numero}?text=${mensaje}`, "_blank");
-}
+    // Estado simple
+    let productos = [], clientes = [], historial = [];
+    let carrito = [];
+    let numeroWimpy = '573118336562';
 
-mostrar('inicio');
-</script>
-</cuerpo>
+    // --- DOM ---
+    const tabs = document.querySelectorAll('.tab');
+    const views = {
+      inicio: document.getElementById('inicioView'),
+      pedidos: document.getElementById('pedidosView'),
+      clientes: document.getElementById('clientesView'),
+      productos: document.getElementById('productosView'),
+      configuracion: document.getElementById('configuracionView'),
+      historial: document.getElementById('historialView')
+    };
+    const productosList = document.getElementById('productosList');
+    const productosAdminList = document.getElementById('productosAdminList');
+    const clientesList = document.getElementById('clientesList');
+    const carritoList = document.getElementById('carritoList');
+    const miniCart = document.getElementById('miniCart');
+    const miniItems = document.getElementById('miniItems');
+    const totalAmount = document.getElementById('totalAmount');
+
+    // Tab switching
+    tabs.forEach(t => t.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      const view = t.dataset.view;
+      Object.values(views).forEach(v => v.style.display = 'none');
+      views[view].style.display = '';
+      if (view === 'pedidos') refreshProducts();
+      if (view === 'clientes') renderClientes();
+      if (view === 'productos') renderProductosAdmin();
+      if (view === 'historial') renderHistorial();
+      if (view === 'configuracion') document.getElementById('configNumero').value = numeroWimpy;
+    }));
+
+    // Initialize
+    (async function init(){
+      await cargarConfiguracion();
+      await cargarProductos();
+      await cargarClientes();
+      await cargarHistorial();
+      renderProducts();
+      renderProductosAdmin();
+      renderClientes();
+      updateCartUI();
+    })();
+
+    // --- Fetch helpers ---
+    async function fetchJSON(url){
+      const r = await fetch(url, {cache:'no-store'});
+      return await r.json();
+    }
+
+    // Config
+    async function cargarConfiguracion(){
+      try{
+        const res = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerConfiguracion');
+        if (res && res.success && res.numero) numeroWimpy = res.numero;
+      }catch(e){ console.warn('cfg',e); }
+    }
+    document.getElementById('btnGuardarConfig').addEventListener('click', async ()=>{
+      const val = document.getElementById('configNumero').value.trim();
+      if (!val) return alert('Ingresa número');
+      await fetchJSON(GOOGLE_SHEETS_API + `?action=guardarConfiguracion&numero=${encodeURIComponent(val)}`);
+      numeroWimpy = val;
+      alert('Guardado');
+    });
+
+    // Productos
+    async function cargarProductos(){
+      try{
+        const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerProductos');
+        if (r && r.success) productos = r.productos || [];
+      }catch(e){ console.warn('productos',e); productos = []; }
+    }
+    function renderProducts(){
+      productosList.innerHTML = '';
+      if (!productos.length){ productosList.innerHTML = '<div class="muted">No hay productos</div>'; return; }
+      productos.forEach(p=>{
+        const el = document.createElement('div'); el.className='card product-row';
+        el.innerHTML = `<div>
+          <div style="font-weight:700">${escapeHtml(p.nombre)}</div>
+          <div class="muted">$ ${Number(p.precio).toLocaleString('es-CO')}</div>
+        </div>
+        <div>
+          <button class="btn small" data-id="${p.id}">Añadir</button>
+        </div>`;
+        productosList.appendChild(el);
+      });
+      // add handlers
+      productosList.querySelectorAll('button[data-id]').forEach(b=>{
+        b.addEventListener('click', () => {
+          const id = b.dataset.id;
+          const prod = productos.find(x=> String(x.id) === String(id));
+          if (prod) addToCart(prod);
+        });
+      });
+    }
+    function renderProductosAdmin(){
+      productosAdminList.innerHTML = '';
+      if (!productos.length) { productosAdminList.innerHTML = '<div class="muted">No hay productos</div>'; return; }
+      productos.forEach(p=>{
+        const el = document.createElement('div'); el.className='card';
+        el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:700">${escapeHtml(p.nombre)}</div>
+            <div class="muted">$ ${Number(p.precio).toLocaleString('es-CO')}</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn ghost small" data-del="${p.id}">Eliminar</button>
+          </div>
+        </div>`;
+        productosAdminList.appendChild(el);
+      });
+      productosAdminList.querySelectorAll('button[data-del]').forEach(b=>{
+        b.addEventListener('click', async ()=> {
+          const id = b.dataset.del;
+          if (!confirm('Eliminar producto?')) return;
+          await fetchJSON(GOOGLE_SHEETS_API + `?action=eliminarProducto&id=${encodeURIComponent(id)}`);
+          await cargarProductos(); renderProducts(); renderProductosAdmin();
+        });
+      });
+    }
+    document.getElementById('btnAddProducto').addEventListener('click', async ()=>{
+      const nombre = document.getElementById('prodNombre').value.trim();
+      const precioRaw = document.getElementById('prodPrecio').value.trim();
+      const precio = parseInt(precioRaw,10);
+      if (!nombre || isNaN(precio)) return alert('Nombre y precio entero requerido');
+      await fetchJSON(GOOGLE_SHEETS_API + `?action=agregarProducto&nombre=${encodeURIComponent(nombre)}&precio=${encodeURIComponent(precio)}`);
+      document.getElementById('prodNombre').value=''; document.getElementById('prodPrecio').value='';
+      await cargarProductos(); renderProducts(); renderProductosAdmin();
+    });
+
+    // Clientes
+    async function cargarClientes(){
+      try{
+        const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerClientes');
+        if (r && r.success) clientes = r.clientes || [];
+      }catch(e){ clientes=[]; }
+    }
+    function renderClientes(){
+      clientesList.innerHTML = '';
+      if (!clientes.length) { clientesList.innerHTML = '<div class="muted">No hay clientes</div>'; return; }
+      clientes.forEach(c=>{
+        const el = document.createElement('div'); el.className='card';
+        el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-weight:700">${escapeHtml(c.nombre)}</div><div class="muted">${escapeHtml(c.telefono)}</div></div>
+        </div>`;
+        clientesList.appendChild(el);
+      });
+    }
+    document.getElementById('btnAddCliente').addEventListener('click', async ()=> {
+      const nombre = document.getElementById('cliNombre').value.trim();
+      const telefono = document.getElementById('cliTelefono').value.trim();
+      if (!nombre || !telefono) return alert('Completa nombre y teléfono');
+      await fetchJSON(GOOGLE_SHEETS_API + `?action=agregarCliente&telefono=${encodeURIComponent(telefono)}&nombre=${encodeURIComponent(nombre)}&email=`);
+      document.getElementById('cliNombre').value=''; document.getElementById('cliTelefono').value='';
+      await cargarClientes(); renderClientes();
+    });
+
+    // Historial (para admin y lista)
+    async function cargarHistorial(){
+      try{
+        const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerHistorial');
+        if (r && r.success) historial = r.historial || [];
+      }catch(e){ historial=[]; }
+    }
+    function renderHistorial(){
+      const node = document.getElementById('historialList');
+      node.innerHTML = '';
+      if (!historial.length) { node.innerHTML = '<div class="muted">Sin registros</div>'; return; }
+      historial.slice().reverse().forEach(h=>{
+        const el = document.createElement('div'); el.className='card';
+        el.innerHTML = `<div style="display:flex;justify-content:space-between"><div>
+          <div style="font-weight:700">${escapeHtml(h.nombre || h.telefono)}</div>
+          <div class="muted">${escapeHtml(h.fecha || '')} ${escapeHtml(h.hora || '')}</div>
+          <div style="margin-top:6px">${escapeHtml(h.detalle || '')}</div>
+          <div class="muted" style="margin-top:6px">Total: $${Number(h.total||0).toLocaleString('es-CO')}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted">${escapeHtml(h.estado||'')}</div>
+        </div></div>`;
+        node.appendChild(el);
+      });
+    }
+
+    // Carrito UI
+    function addToCart(prod){
+      const found = carrito.find(i=> String(i.id)===String(prod.id));
+      if (found) found.cantidad++;
+      else carrito.push({ id:prod.id, nombre:prod.nombre, precio:parseInt(prod.precio,10), cantidad:1 });
+      updateCartUI();
+    }
+    function updateCartUI(){
+      // list
+      carritoList.innerHTML = '';
+      miniItems.innerHTML = '';
+      let total = 0;
+      if (!carrito.length) { carritoList.innerHTML = '<div class="muted">Carrito vacío</div>'; miniCart.style.display='none'; }
+      else {
+        carrito.forEach(i=>{
+          total += i.precio * i.cantidad;
+          const row = document.createElement('div');
+          row.style.display='flex'; row.style.justifyContent='space-between'; row.style.gap='8px'; row.style.alignItems='center';
+          row.innerHTML = `<div>${escapeHtml(i.nombre)} <span class="muted">x${i.cantidad}</span></div><div>$${Number(i.precio*i.cantidad).toLocaleString('es-CO')}</div>`;
+          carritoList.appendChild(row);
+          const mini = document.createElement('div'); mini.style.marginBottom='6px'; mini.textContent = `${i.nombre} x${i.cantidad} — $${Number(i.precio*i.cantidad).toLocaleString('es-CO')}`;
+          miniItems.appendChild(mini);
+        });
+        miniCart.style.display = '';
+      }
+      totalAmount.textContent = `$ ${Number(total).toLocaleString('es-CO')}`;
+    }
+    document.getElementById('btnClearCart').addEventListener('click', ()=>{ carrito=[]; updateCartUI(); });
+    document.getElementById('btnOpenPedidos').addEventListener('click', ()=> {
+      document.querySelector('.tab[data-view="pedidos"]').click();
+    });
+
+    // Enviar pedido (registra como Pendiente)
+    document.getElementById('btnSendOrder').addEventListener('click', async ()=>{
+      const telefono = document.getElementById('inputTelefono').value.trim();
+      if (!telefono) return alert('Ingresa tu teléfono');
+      if (!carrito.length) return alert('Carrito vacío');
+      const detalle = carrito.map(i=> `${i.cantidad} x ${i.nombre}`).join(', ');
+      const total = carrito.reduce((s,i)=> s + (i.precio * i.cantidad), 0);
+      // registrar pedido (se agregará en Historial con estado "Pendiente")
+      const url = `${GOOGLE_SHEETS_API}?action=registrarPedido&nombre=${encodeURIComponent('Cliente')}&telefono=${encodeURIComponent(telefono)}&detalle=${encodeURIComponent(detalle)}&total=${encodeURIComponent(total)}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json && json.success){
+        // abrir whatsapp para notificar
+        const waNumero = numeroWimpy.replace(/\+/g,'').replace(/\s+/g,'');
+        const msg = encodeURIComponent(`Nuevo pedido\nTel: ${telefono}\nPedido: ${detalle}\nTotal: $${Number(total).toLocaleString('es-CO')}`);
+        const waUrl = `https://wa.me/${waNumero}?text=${msg}`;
+        window.open(waUrl,'_blank');
+        alert('Pedido enviado. Quedó como PENDIENTE para aprobación del admin.');
+        carrito = []; updateCartUI();
+        await cargarHistorial(); // actualizar vista historial
+      } else {
+        alert('Error registrando pedido');
+      }
+    });
+
+    // Admin access (floating button bottom)
+    document.getElementById('adminBtn').addEventListener('click', ()=>{
+      const pin = prompt('Ingrese PIN administrador:');
+      if (pin === ADMIN_PIN){
+        alert('Acceso admin concedido');
+        // activar una vista simple de administración en la pestaña Productos / Historial
+        // saltar a vista historial
+        document.querySelector('.tab[data-view="historial"]').click();
+        // mostrar aviso con instrucciones para aprobar
+        setTimeout(()=> alert('En el historial aparecen pedidos. Para aprobar un pedido, edite la hoja "Historial" desde Google Sheets (columna Estado). Si deseas, puedo agregar la función para aprobar desde esta interfaz.'), 300);
+      } else {
+        alert('PIN incorrecto');
+      }
+    });
+
+    // Utility
+    function escapeHtml(text){
+      if (!text && text !== 0) return '';
+      return String(text).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]); });
+    }
+
+    // small helpers to refresh lists
+    async function refreshProducts(){ await cargarProductos(); renderProducts(); }
+    async function refreshClients(){ await cargarClientes(); renderClientes(); }
+  </script>
+</body>
 </html>

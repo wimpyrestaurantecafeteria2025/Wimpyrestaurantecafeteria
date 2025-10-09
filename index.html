@@ -1,561 +1,661 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Wimpy - v3 (Admin)</title>
-  <style>
-    :root{
-      --bg:#0b0b0c; --panel:#0f1012; --muted:#9aa0a6; --accent:#ff6b35; --accent-2:#ff9a57;
-      --card:#141416; --border:#232326; --white:#f5f5f5;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:Inter, system-ui, Arial, sans-serif;background:var(--bg);color:var(--white);}
-    header{padding:14px;background:linear-gradient(90deg,#0f1720,#111827);display:flex;align-items:center;gap:12px;}
-    header .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(180deg,#ff8a4c,#ff6b35);display:flex;align-items:center;justify-content:center;font-size:1.2rem}
-    header h1{margin:0;font-size:1.05rem;font-weight:700;}
-    .container{max-width:980px;margin:14px auto;padding:12px;}
-    nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
-    .tab{background:transparent;border:1px solid transparent;padding:8px 12px;border-radius:10px;cursor:pointer;color:var(--white);border:1px solid var(--border);background:linear-gradient(180deg,#0d0d0e,#121214);}
-    .tab.hidden{display:none}
-    .tab.active{box-shadow:0 6px 18px rgba(0,0,0,.6);border-color:rgba(255,255,255,.04);}
-    .panel{background:var(--panel);border:1px solid var(--border);padding:14px;border-radius:12px;}
-    .grid{display:grid;gap:12px;}
-    .grid.cols-3{grid-template-columns:repeat(3,1fr)}
-    .card{background:#0e0f10;border:1px solid #222;padding:12px;border-radius:10px;}
-    .product-row{display:flex;justify-content:space-between;align-items:center;gap:12px;}
-    .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer;}
-    .btn.ghost{background:transparent;border:1px solid #2a2a2a;color:var(--white);}
-    .small{padding:6px 8px;font-size:.9rem;}
-    input,select,textarea{background:#0c0c0d;color:var(--white);border:1px solid #222;padding:8px;border-radius:8px;width:100%;}
-    footer{position:fixed;bottom:12px;left:12px;right:12px;display:flex;justify-content:center;pointer-events:none;}
-    .admin-floating{pointer-events:auto;background:#0b0b0d;border:1px solid #2b2b2b;padding:10px 14px;border-radius:999px;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.6);color:var(--white);}
-    .cart{position:fixed;right:12px;bottom:12px;background:#0b0b0d;border-radius:12px;padding:10px;border:1px solid #222;min-width:240px;}
-    .muted{color:var(--muted);font-size:.9rem;}
-    .badge{background:#111;padding:6px 8px;border-radius:8px;border:1px solid #222}
-    .search{display:flex;gap:8px}
-    .top-row{display:flex;gap:12px;align-items:center;justify-content:space-between}
-    @media (max-width:600px){ .grid.cols-3{grid-template-columns:repeat(1,1fr)} .grid.cols-2{grid-template-columns:repeat(1,1fr)} .cart{right:10px;left:10px} }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wimpy Super App - Admin</title>
+    <style>
+        /* Diseño Moderno y Estructurado (Opción 2) */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #1a1a2e; /* Fondo Oscuro Profundo */
+            color: #e0e0e0; 
+            margin: 0; 
+            padding: 0; 
+        }
+        header { 
+            background-color: #16213e; 
+            padding: 20px; 
+            text-align: center; 
+            font-size: 1.6em; 
+            color: #fff; 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        nav { 
+            display: flex; 
+            justify-content: center; 
+            background-color: #1f1f3e; 
+            padding: 12px 0; 
+            position: sticky; 
+            top: 0; 
+            z-index: 1000;
+        }
+        nav button { 
+            background-color: #4e44e2; 
+            color: #fff; 
+            border: none; 
+            padding: 10px 18px; 
+            margin: 0 8px;
+            border-radius: 6px; 
+            cursor: pointer; 
+            transition: background-color 0.3s, transform 0.1s;
+            font-weight: 600;
+        }
+        nav button:hover { 
+            background-color: #3f35c7; 
+            transform: translateY(-1px); 
+        }
+        section { 
+            padding: 20px; 
+            max-width: 1000px; 
+            margin: 0 auto; 
+        }
+        .oculto { 
+            display: none; 
+        }
+        .admin-btn { 
+            position: fixed; 
+            bottom: 20px; 
+            right: 20px; 
+            background: #e94560; 
+            color: white; 
+            padding: 15px; 
+            border: none; 
+            border-radius: 50%; 
+            font-size: 1.4em; 
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            transition: background-color 0.3s;
+        }
+        .admin-btn:hover {
+            background: #d43450;
+        }
+        .card {
+            background-color: #1f1f3e;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        h2, h3 { 
+            color: #90d7ff; 
+            border-bottom: 2px solid #3f35c7; 
+            padding-bottom: 5px; 
+            margin-top: 0;
+        }
+        label { 
+            display: block; 
+            margin-top: 15px; 
+            font-weight: 500; 
+            color: #ccc;
+        }
+        input[type="text"], input[type="email"], textarea, input[type="number"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #3f35c7;
+            border-radius: 6px;
+            background-color: #2b2a4a;
+            color: #e0e0e0;
+            box-sizing: border-box;
+        }
+        .btn {
+            background-color: #4e44e2; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin-top: 20px;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #3f35c7;
+        }
+        .btn-factura {
+            background-color: #00b894;
+            margin-right: 15px;
+        }
+        .btn-factura:hover {
+            background-color: #00a082;
+        }
+        .btn-red {
+            background-color: #e94560;
+        }
+        .btn-red:hover {
+            background-color: #d43450;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .mensaje {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .success { background-color: #2e7d32; color: white; }
+        .error { background-color: #c62828; color: white; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #3f35c7;
+        }
+        th {
+            background-color: #16213e;
+            color: #90d7ff;
+        }
+    </style>
 </head>
 <body>
-  <header>
-    <div class="logo">🍔</div>
-    <h1>Wimpy — Pedidos & Entregas (v3)</h1>
-  </header>
 
-  <main class="container">
-    <nav id="menu">
-      <!-- Para clientes visibles solo: Pedidos + Confirmar (el resto hidden hasta admin) -->
-      <div class="tab" data-view="inicio">Inicio</div>
-      <div class="tab" data-view="pedidos">Pedidos</div>
-      <div class="tab" data-view="confirmar">Confirmar entrega</div>
+<header>Wimpy Super App</header>
 
-      <!-- Admin only (hidden para clientes) -->
-      <div class="tab hidden" data-view="clientes">Clientes</div>
-      <div class="tab hidden" data-view="productos">Productos</div>
-      <div class="tab hidden" data-view="configuracion">Configuración</div>
-      <div class="tab hidden" data-view="historial">Historial</div>
-      <div class="tab hidden" data-view="dashboard">Dashboard</div>
-    </nav>
+<nav id="navAdmin" class="oculto">
+    <button onclick="mostrar('adminPanel')">🏠 Dashboard</button>
+    <button onclick="mostrar('gestionClientes'); obtenerClientes()">👥 Clientes</button>
+    <button onclick="mostrar('gestionProductos'); obtenerProductosAdmin()">🍕 Productos</button>
+    <button onclick="mostrar('historial'); obtenerHistorial()">🧾 Historial</button>
+    <button onclick="mostrar('configuracion')">⚙️ Configuración</button>
+    <button onclick="mostrar('facturacion')">💰 Facturación</button>
+</nav>
 
-    <section id="vista" class="panel">
-      <!-- INICIO -->
-      <div id="inicioView">
-        <div class="top-row">
-          <div>
-            <h2>Bienvenido a Wimpy</h2>
-            <p class="muted">Haz tu pedido o confirma tu entrega. Si eres administrador usa el botón inferior para ingresar.</p>
-          </div>
-          <div class="badge">Modo: Cliente</div>
-        </div>
-      </div>
+<section id="pedido" class="card">
+    <h2>Realizar Pedido</h2>
+    <div id="pedidoMessage" class="mensaje oculto"></div>
+    <label for="nombreCliente">Nombre:</label>
+    <input type="text" id="nombreCliente" placeholder="Ej: Edwin (Empleado)">
+    
+    <label for="telefonoCliente">Teléfono:</label>
+    <input type="text" id="telefonoCliente" placeholder="Ej: 573001234567">
+    
+    <label for="detallePedido">Detalle del Pedido (Producto, Cantidad):</label>
+    <textarea id="detallePedido" rows="4"></textarea>
 
-      <!-- PEDIDOS (Cliente) -->
-      <div id="pedidosView" style="display:none;">
-        <h2>Hacer pedido</h2>
-        <div style="margin-bottom:12px;">
-          <label class="muted">Tu teléfono (ej: 3118336562)</label>
-          <input id="inputTelefono" placeholder="3118336562"/>
-        </div>
+    <label for="totalPedido">Valor Total:</label>
+    <input type="number" id="totalPedido" placeholder="Ej: 15000">
 
-        <div>
-          <div class="top-row"><h3>Menú</h3>
-            <div style="display:flex;gap:8px;align-items:center">
-              <input id="searchProducto" placeholder="Buscar producto" style="padding:8px;border-radius:8px;border:1px solid #222;background:#0c0c0d;color:var(--white)"/>
-              <button class="btn small" id="btnRefrescarProductos">Refrescar</button>
-            </div>
-          </div>
-          <div id="productosList" class="grid cols-3" style="margin-top:8px;"></div>
-        </div>
+    <button class="btn" onclick="registrarPedido()">Registrar Pedido</button>
+</section>
 
-        <div style="margin-top:12px;">
-          <h3>Tu carrito</h3>
-          <div id="carritoList"></div>
-          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
-            <div class="muted">Total:</div><div id="totalAmount" style="font-weight:700">$ 0</div>
-            <div style="flex:1"></div>
-            <button class="btn" id="btnSendOrder">Enviar pedido (WhatsApp)</button>
-          </div>
-          <p class="muted" style="margin-top:8px;">Nota: el pedido quedará como <strong>Pendiente</strong> hasta ser aprobado por el administrador.</p>
-        </div>
-      </div>
+<section id="adminPanel" class="oculto card">
+    <h2>Dashboard Administrativo</h2>
+    <p>Indicadores automáticos (STUB):</p>
+    <ul>
+        <li>Ventas totales del mes: **$1,500,000** (STUB)</li>
+        <li>Pedidos pendientes: **5** (STUB)</li>
+        <li>Total de clientes activos: **12** (STUB)</li>
+        <li>Estado del Menú: <span id="menuStatus">Cargando...</span></li>
+    </ul>
+</section>
 
-      <!-- CONFIRMAR ENTREGA (Cliente) -->
-      <div id="confirmarView" style="display:none;">
-        <h2>Confirmar entrega</h2>
-        <p class="muted">Ingresa tu teléfono y confirma las entregas registradas a tu nombre.</p>
-        <div style="margin-top:10px">
-          <input id="inputTelefonoConfirm" placeholder="3118336562"/>
-        </div>
-        <div style="margin-top:10px" id="listaPendientesCliente"></div>
-      </div>
-
-      <!-- CLIENTES (Admin) -->
-      <div id="clientesView" style="display:none;">
-        <div class="top-row">
-          <h2>Clientes</h2>
-          <div><input id="filtroClienteSearch" placeholder="Buscar cliente..." /></div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
-          <input id="cliNombre" placeholder="Nombre" style="flex:1;min-width:180px"/>
-          <input id="cliTelefono" placeholder="Teléfono" style="width:180px"/>
-          <button class="btn small" id="btnAddCliente">Agregar cliente</button>
-        </div>
-        <div id="clientesList" class="grid cols-2"></div>
-      </div>
-
-      <!-- PRODUCTOS (Admin) -->
-      <div id="productosView" style="display:none;">
-        <div class="top-row"><h2>Productos</h2>
-          <div><input id="filtroProducto" placeholder="Buscar producto..." /></div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
-          <input id="prodNombre" placeholder="Nombre producto" style="flex:1;min-width:180px"/>
-          <input id="prodPrecio" placeholder="Precio entero (ej: 15000)" style="width:150px"/>
-          <button class="btn small" id="btnAddProducto">Agregar producto</button>
-        </div>
-        <div id="productosAdminList" class="grid cols-3"></div>
-      </div>
-
-      <!-- CONFIGURACIÓN (Admin) -->
-      <div id="configuracionView" style="display:none;">
-        <h2>Configuración</h2>
-        <label class="muted">Número de WhatsApp de Wimpy (sin +)</label>
-        <input id="configNumero" />
-        <div style="margin-top:8px;display:flex;gap:8px;">
-          <button class="btn" id="btnGuardarConfig">Guardar</button>
-          <button class="btn ghost" id="btnReiniciarConfig">Revertir</button>
-        </div>
-      </div>
-
-      <!-- HISTORIAL & APROBACIÓN (Admin) -->
-      <div id="historialView" style="display:none;">
-        <div class="top-row">
-          <h2>Pedidos pendientes / historial</h2>
-          <div style="display:flex;gap:8px;align-items:center">
-            <select id="filtroEstado">
-              <option value="todos">Todos</option>
-              <option value="pendiente">Pendientes</option>
-              <option value="aprobado">Aprobados</option>
-              <option value="entregado">Entregados</option>
-            </select>
-            <input id="filtroSearchHist" placeholder="Buscar (tel, nombre, detalle)"/>
-            <button class="btn small" id="btnExportCsv">Exportar CSV</button>
-          </div>
-        </div>
-
-        <div id="historialList" style="margin-top:12px"></div>
-      </div>
-
-      <!-- DASHBOARD (Admin) -->
-      <div id="dashboardView" style="display:none;">
-        <h2>Dashboard</h2>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px">
-          <div class="card"><div class="muted">Pedidos totales</div><div id="statTotal" style="font-weight:800;font-size:1.4rem">0</div></div>
-          <div class="card"><div class="muted">Pendientes</div><div id="statPend" style="font-weight:800;font-size:1.4rem">0</div></div>
-          <div class="card"><div class="muted">Aprobados</div><div id="statAprob" style="font-weight:800;font-size:1.4rem">0</div></div>
-          <div class="card"><div class="muted">Entregados</div><div id="statEnt" style="font-weight:800;font-size:1.4rem">0</div></div>
-        </div>
-      </div>
-
-    </section>
-  </main>
-
-  <div class="cart" id="miniCart" style="display:none;">
-    <div style="font-weight:700;margin-bottom:6px">Carrito</div>
-    <div id="miniItems" style="max-height:180px;overflow:auto"></div>
-    <div style="margin-top:8px;display:flex;gap:8px;">
-      <button class="btn small" id="btnOpenPedidos">Abrir</button>
-      <button class="btn ghost small" id="btnClearCart">Vaciar</button>
+<section id="gestionClientes" class="oculto card">
+    <h2>👥 Gestión de Clientes</h2>
+    <div id="clienteMessage" class="mensaje oculto"></div>
+    
+    <div class="card">
+        <h3>Añadir Nuevo Cliente</h3>
+        <label for="newClienteNombre">Nombre:</label>
+        <input type="text" id="newClienteNombre" placeholder="Nombre completo">
+        <label for="newClienteTelefono">Teléfono (Clave de eliminación):</label>
+        <input type="text" id="newClienteTelefono" placeholder="Teléfono único">
+        <button class="btn" onclick="agregarCliente()">Añadir Cliente</button>
     </div>
-  </div>
 
-  <footer>
-    <button class="admin-floating" id="adminBtn">🔒 Admin</button>
-  </footer>
+    <h3>Clientes Registrados</h3>
+    <table id="tablaClientes">
+        <thead><tr><th>Nombre</th><th>Teléfono</th><th>Empresa ID</th><th>Acción</th></tr></thead>
+        <tbody></tbody>
+    </table>
+</section>
 
-  <script>
-  // ---------- CONFIG ----------
-  const GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec';
-  const ADMIN_PIN = '1995';
-  // ---------- STATE ----------
-  let productos = [], clientes = [], historial = [];
-  let carrito = [];
-  let numeroWimpy = '573118336562';
-  let isAdmin = false;
+<section id="gestionProductos" class="oculto card">
+    <h2>🍕 Gestión de Productos</h2>
+    <div id="productoMessage" class="mensaje oculto"></div>
+    
+    <div class="card">
+        <h3>Añadir Nuevo Producto</h3>
+        <label for="newProductoNombre">Nombre:</label>
+        <input type="text" id="newProductoNombre" placeholder="Ej: Sandwich Clásico">
+        <label for="newProductoPrecio">Precio:</label>
+        <input type="number" id="newProductoPrecio" placeholder="Ej: 8500">
+        <button class="btn" onclick="agregarProducto()">Añadir Producto</button>
+    </div>
 
-  // ---------- HELPERS ----------
-  const $ = (s) => document.querySelector(s);
-  const $$ = (s) => Array.from(document.querySelectorAll(s));
-  function esc(t){ if(t===null||t===undefined) return ''; return String(t).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-  async function fetchJSON(url){ const r = await fetch(url,{cache:'no-store'}); return await r.json().catch(()=>({})); }
+    <h3>Productos Disponibles</h3>
+    <table id="tablaProductos">
+        <thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Activo</th><th>Acción</th></tr></thead>
+        <tbody></tbody>
+    </table>
+</section>
 
-  // ---------- NAV / VIEWS ----------
-  $$('.tab').forEach(t=>{
-    t.addEventListener('click', ()=> {
-      $$('.tab').forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      const view = t.dataset.view;
-      // hide all
-      ['inicio','pedidos','confirmar','clientes','productos','configuracion','historial','dashboard'].forEach(v=>{
-        const el = document.getElementById(v+'View');
-        if (el) el.style.display = (v===view ? '' : 'none');
-      });
-      // refresh content
-      if (view==='pedidos') renderProducts();
-      if (view==='clientes') renderClientes();
-      if (view==='productos') renderProductosAdmin();
-      if (view==='historial') renderHistorial();
-      if (view==='dashboard') renderDashboard();
-      if (view==='confirmar') renderPendientesCliente();
-      if (view==='configuracion') $('#configNumero').value = numeroWimpy;
-    });
-  });
+<section id="historial" class="oculto card">
+    <h2>🧾 Historial de Pedidos</h2>
+    <table id="tablaHistorial">
+        <thead><tr><th>Fecha</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Empresa</th></tr></thead>
+        <tbody></tbody>
+    </table>
+</section>
 
-  // ---------- INIT ----------
-  (async function init(){
-    await cargarConfiguracion();
-    await cargarProductos();
-    await cargarClientes();
-    await cargarHistorial();
-    renderProducts(); renderProductosAdmin(); renderClientes(); updateCartUI(); renderDashboard();
-    // default tab
-    document.querySelector('.tab[data-view="inicio"]').classList.add('active');
-  })();
+<section id="configuracion" class="oculto card">
+    <h2>⚙️ Configuración Empresarial</h2>
+    <div id="configMessage" class="mensaje oculto"></div>
 
-  // ---------- CARGA / CRUD ----------
-  async function cargarConfiguracion(){
-    try {
-      const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerConfiguracion');
-      if (r && r.success && r.numero) numeroWimpy = r.numero;
-    } catch(e){ console.warn(e); }
-  }
-  async function guardarConfiguracion(numero){
-    const r = await fetchJSON(GOOGLE_SHEETS_API + `?action=guardarConfiguracion&numero=${encodeURIComponent(numero)}`);
-    if (r && r.success){ numeroWimpy = numero; alert('Guardado'); }
-    else alert('Error guardando');
-  }
+    <div class="grid-2">
+        <div class="card">
+            <h3>🏢 Datos de Wimpy (Tu Empresa)</h3>
+            <label for="wimpyNombre">Nombre:</label>
+            <input type="text" id="wimpyNombre">
+            
+            <label for="wimpyNIT">NIT:</label>
+            <input type="text" id="wimpyNIT">
+            
+            <label for="wimpyDireccion">Dirección:</label>
+            <input type="text" id="wimpyDireccion">
 
-  async function cargarProductos(){
-    try {
-      const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerProductos');
-      productos = (r && r.success) ? (r.productos||[]) : [];
-    } catch(e){ productos = []; }
-  }
-  async function cargarClientes(){
-    try {
-      const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerClientes');
-      clientes = (r && r.success) ? (r.clientes||[]) : [];
-    } catch(e){ clientes = []; }
-  }
-  async function cargarHistorial(){
-    try {
-      const r = await fetchJSON(GOOGLE_SHEETS_API + '?action=obtenerHistorial');
-      historial = (r && r.success) ? (r.historial||[]) : [];
-    } catch(e){ historial = []; }
-  }
+            <label for="wimpyTelefono">Teléfono:</label>
+            <input type="text" id="wimpyTelefono">
 
-  // ---------- RENDER PRODUCTOS (Cliente) ----------
-  function renderProducts(){
-    const q = $('#searchProducto').value.trim().toLowerCase();
-    const cont = $('#productosList'); cont.innerHTML = '';
-    const lista = productos.filter(p => (String(p.activo) === 'SI' || String(p.activo) === 'Si' || p.activo===true || p.activo=='true' || p.activo==='TRUE') );
-    const fil = lista.filter(p => !q || (p.nombre||'').toLowerCase().includes(q));
-    if (!fil.length){ cont.innerHTML = '<div class="muted">No hay productos</div>'; return; }
-    fil.forEach(p=>{
-      const el = document.createElement('div'); el.className='card product-row';
-      el.innerHTML = `<div><div style="font-weight:700">${esc(p.nombre)}</div><div class="muted">$ ${Number(p.precio).toLocaleString('es-CO')}</div></div>
-        <div><button class="btn small" data-id="${p.id}">Añadir</button></div>`;
-      cont.appendChild(el);
-    });
-    cont.querySelectorAll('button[data-id]').forEach(b=>{
-      b.addEventListener('click', ()=> {
-        const id = b.dataset.id;
-        const prod = productos.find(x=> String(x.id)===String(id));
-        if (prod) { addToCart(prod); }
-      });
-    });
-  }
+            <label for="wimpyCorreo">Correo:</label>
+            <input type="email" id="wimpyCorreo">
+            
+            <p style="font-size:0.9em; margin-top: 15px;">**Logo y Firma:** Sube las imágenes a tu carpeta **Wimpy_Assets** en Drive. <br>URL de Assets: <span id="assetsURL">Cargando...</span></p>
 
-  // ---------- RENDER PRODUCTOS ADMIN ----------
-  function renderProductosAdmin(){
-    const q = $('#filtroProducto').value.trim().toLowerCase();
-    const cont = $('#productosAdminList'); cont.innerHTML = '';
-    const fil = productos.filter(p => !q || (p.nombre||'').toLowerCase().includes(q));
-    if (!fil.length){ cont.innerHTML = '<div class="muted">No hay productos</div>'; return; }
-    fil.forEach(p=>{
-      const el = document.createElement('div'); el.className='card';
-      el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-        <div><div style="font-weight:700">${esc(p.nombre)}</div><div class="muted">$ ${Number(p.precio).toLocaleString('es-CO')}</div></div>
-        <div style="display:flex;gap:6px">
-          <button class="btn ghost small" data-del="${p.id}">Eliminar</button>
-        </div></div>`;
-      cont.appendChild(el);
-    });
-    cont.querySelectorAll('button[data-del]').forEach(b=>{
-      b.addEventListener('click', async ()=>{
-        const id = b.dataset.del;
-        if (!confirm('Eliminar producto?')) return;
-        await fetchJSON(GOOGLE_SHEETS_API + `?action=eliminarProducto&id=${encodeURIComponent(id)}`);
-        await cargarProductos(); renderProducts(); renderProductosAdmin();
-      });
-    });
-  }
-
-  // ---------- RENDER CLIENTES (ADMIN) ----------
-  function renderClientes(){
-    const q = $('#filtroClienteSearch').value.trim().toLowerCase();
-    const cont = $('#clientesList'); cont.innerHTML = '';
-    const fil = clientes.filter(c => !q || (c.nombre||'').toLowerCase().includes(q) || (c.telefono||'').includes(q));
-    if (!fil.length) { cont.innerHTML = '<div class="muted">No hay clientes</div>'; return; }
-    fil.forEach(c=>{
-      const el = document.createElement('div'); el.className='card';
-      el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-        <div><div style="font-weight:700">${esc(c.nombre)}</div><div class="muted">${esc(c.telefono)}</div></div>
-      </div>`;
-      cont.appendChild(el);
-    });
-  }
-
-  // ---------- RENDER HISTORIAL (ADMIN) ----------
-  function renderHistorial(){
-    const estado = $('#filtroEstado').value;
-    const q = $('#filtroSearchHist').value.trim().toLowerCase();
-    const cont = $('#historialList'); cont.innerHTML = '';
-    let items = historial.slice().reverse();
-    if (estado !== 'todos') items = items.filter(h => (h.estado||'').toLowerCase() === estado);
-    if (q) items = items.filter(h => (h.telefono||'').includes(q) || (h.nombre||'').toLowerCase().includes(q) || (h.detalle||'').toLowerCase().includes(q));
-    if (!items.length){ cont.innerHTML = '<div class="muted">Sin registros</div>'; return; }
-    items.forEach(h=>{
-      const el = document.createElement('div'); el.className='card';
-      el.innerHTML = `<div style="display:flex;justify-content:space-between">
-        <div>
-          <div style="font-weight:700">${esc(h.nombre || h.telefono)}</div>
-          <div class="muted">${esc(h.fecha || '')} ${esc(h.hora||'')}</div>
-          <div style="margin-top:6px">${esc(h.detalle||'')}</div>
-          <div class="muted" style="margin-top:6px">Total: $${Number(h.total||0).toLocaleString('es-CO')}</div>
+            <button class="btn" onclick="guardarConfiguracionWimpy()">Guardar Datos de Wimpy</button>
         </div>
-        <div style="text-align:right">
-          <div class="muted">${esc(h.estado||'')}</div>
-          <div style="margin-top:8px"><button class="btn small" data-approve="${h.timestamp}">Aprobar</button>
-          <button class="btn ghost small" data-ent="${h.timestamp}">Confirmar entrega</button>
-          <button class="btn ghost small" data-invoice="${h.timestamp}">Cuenta (PDF)</button></div>
+
+        <div class="card">
+            <h3>💼 Datos de la Empresa Contratante (ID 1)</h3>
+            <label for="empresaNombre">Nombre de la Empresa:</label>
+            <input type="text" id="empresaNombre">
+            
+            <label for="empresaNIT">NIT de la Empresa:</label>
+            <input type="text" id="empresaNIT">
+            
+            <label for="empresaCorreo">Correo Destinatario:</label>
+            <input type="email" id="empresaCorreo">
+
+            <label for="empresaContacto">A Quién Va Dirigida:</label>
+            <input type="text" id="empresaContacto">
+
+            <button class="btn" onclick="guardarEmpresaContratante()">Guardar Datos Contratante</button>
         </div>
-      </div>`;
-      cont.appendChild(el);
-    });
-    // handlers
-    cont.querySelectorAll('button[data-approve]').forEach(b=>{
-      b.addEventListener('click', async ()=>{
-        const ts = b.dataset.approve;
-        if (!confirm('Aprobar pedido?')) return;
-        const res = await fetchJSON(GOOGLE_SHEETS_API + `?action=aprobarPedido&timestamp=${encodeURIComponent(ts)}`);
-        if (res && res.success){ await cargarHistorial(); renderHistorial(); renderDashboard(); alert('Pedido aprobado'); }
-        else alert('Error');
-      });
-    });
-    cont.querySelectorAll('button[data-ent]').forEach(b=>{
-      b.addEventListener('click', async ()=>{
-        const ts = b.dataset.ent;
-        if (!confirm('Marcar como entregado?')) return;
-        const res = await fetchJSON(GOOGLE_SHEETS_API + `?action=confirmarEntrega&timestamp=${encodeURIComponent(ts)}`);
-        if (res && res.success){ await cargarHistorial(); renderHistorial(); renderDashboard(); alert('Entrega confirmada'); }
-        else alert('Error');
-      });
-    });
-    cont.querySelectorAll('button[data-invoice]').forEach(b=>{
-      b.addEventListener('click', async ()=>{
-        const ts = b.dataset.invoice;
-        const email = prompt('Enviar por correo a (email) o dejar vacío para solo descargar:');
-        const res = await fetchJSON(GOOGLE_SHEETS_API + `?action=generarCuentaCobro&timestamp=${encodeURIComponent(ts)}&enviarEmail=${encodeURIComponent(email||'')}`);
-        if (res && res.success) alert('Cuenta de cobro generada y ' + (email? 'enviada' : 'listo, descarga en Drive'));
-        else alert('Error generando cuenta');
-      });
-    });
-  }
+    </div>
+</section>
 
-  // ---------- RENDER DASHBOARD ----------
-  function renderDashboard(){
-    const total = historial.length;
-    const pend = historial.filter(h=> (h.estado||'').toLowerCase()==='pendiente').length;
-    const apro = historial.filter(h=> (h.estado||'').toLowerCase()==='aprobado').length;
-    const ent = historial.filter(h=> (h.estado||'').toLowerCase()==='entregado').length;
-    $('#statTotal').textContent = total;
-    $('#statPend').textContent = pend;
-    $('#statAprob').textContent = apro;
-    $('#statEnt').textContent = ent;
-    $('#menu .badge')?.textContent && ($('#menu .badge').textContent = isAdmin ? 'Modo: Admin' : 'Modo: Cliente');
-  }
+<section id="facturacion" class="oculto card">
+    <h2>💰 Facturación y Reportes Mensuales</h2>
+    <div id="facturaMessage" class="mensaje oculto"></div>
+    <p>Mes y Empresa por defecto: <span id="facturaData">Octubre 2025 / TecnoSoluciones S.A.S.</span></p>
 
-  // ---------- CARRITO ----------
-  function addToCart(prod){
-    const found = carrito.find(i=> String(i.id)===String(prod.id));
-    if (found) found.cantidad++;
-    else carrito.push({ id:prod.id, nombre:prod.nombre, precio:parseInt(prod.precio,10), cantidad:1 });
-    updateCartUI();
-  }
-  function updateCartUI(){
-    const list = $('#carritoList'); list.innerHTML=''; $('#miniItems').innerHTML='';
-    let total = 0;
-    if (!carrito.length){ list.innerHTML = '<div class="muted">Carrito vacío</div>'; $('#miniCart').style.display='none'; }
-    else {
-      carrito.forEach(i=>{
-        total += i.precio * i.cantidad;
-        const row = document.createElement('div');
-        row.style.display='flex'; row.style.justifyContent='space-between'; row.style.gap='8px'; row.style.alignItems='center'; row.style.marginBottom='8px';
-        row.innerHTML = `<div>${esc(i.nombre)} <span class="muted">x${i.cantidad}</span></div><div>$${Number(i.precio*i.cantidad).toLocaleString('es-CO')}</div>`;
-        list.appendChild(row);
-        const mini = document.createElement('div'); mini.style.marginBottom='6px'; mini.textContent = `${i.nombre} x${i.cantidad} — $${Number(i.precio*i.cantidad).toLocaleString('es-CO')}`;
-        $('#miniItems').appendChild(mini);
-      });
-      $('#miniCart').style.display = '';
+    <h3>Generar Documentos</h3>
+    <button class="btn btn-factura" onclick="generarCuentaCobroPDF()">1. Generar Cuenta de Cobro PDF</button>
+    <button class="btn btn-factura" onclick="generarDetalleExcel()">2. Generar Detalle Excel por Empleado</button>
+    <button class="btn" onclick="reenviarEmailCuentaCobro()">3. Reenviar Cuenta de Cobro (sin regenerar)</button>
+</section>
+
+<button class="admin-btn" onclick="accederAdmin()">🔒</button>
+
+
+<script>
+// ¡IMPORTANTE! REEMPLAZA ESTA URL CON LA URL DE DESPLIEGUE DE TU APPS SCRIPT.
+const GOOGLE_SHEETS_API = 'REEMPLAZAR_CON_TU_URL_DE_APPS_SCRIPT_FINAL'; 
+let adminAcceso = false;
+const ADMIN_PIN_CLIENTE = "1995"; // PIN para el prompt inicial
+
+// ------------------------------------------------------------------
+// --- UTILIDADES ---
+// ------------------------------------------------------------------
+
+function mostrar(seccion) {
+    document.querySelectorAll('section').forEach(s => s.classList.add('oculto'));
+    document.getElementById(seccion).classList.remove('oculto');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    obtenerConfiguracionPublica();
+    mostrar('pedido');
+});
+
+function mostrarMensaje(elementId, message, type) {
+    const el = document.getElementById(elementId);
+    el.textContent = message;
+    el.className = `mensaje ${type}`;
+    el.classList.remove('oculto');
+    setTimeout(() => el.classList.add('oculto'), 5000);
+}
+
+// ------------------------------------------------------------------
+// --- AUTENTICACIÓN Y CARGA DE DATOS ---
+// ------------------------------------------------------------------
+
+function accederAdmin() {
+    if (adminAcceso) {
+        if (confirm("¿Cerrar sesión de administrador?")) {
+            adminAcceso = false;
+            document.getElementById('navAdmin').classList.add('oculto');
+            mostrar('pedido');
+            alert("Sesión cerrada.");
+        }
+        return;
     }
-    $('#totalAmount').textContent = `$ ${Number(total).toLocaleString('es-CO')}`;
-  }
-  $('#btnClearCart').addEventListener('click', ()=>{ carrito=[]; updateCartUI(); });
-  $('#btnOpenPedidos').addEventListener('click', ()=> document.querySelector('.tab[data-view="pedidos"]').click());
-  $('#btnRefrescarProductos').addEventListener('click', async ()=>{ await cargarProductos(); renderProducts(); });
-
-  // ---------- ENVIAR PEDIDO (Cliente) ----------
-  $('#btnSendOrder').addEventListener('click', async ()=>{
-    const telefono = $('#inputTelefono').value.trim();
-    if (!telefono) return alert('Ingresa tu teléfono');
-    if (!carrito.length) return alert('Carrito vacío');
-    // validar precios enteros
-    if (carrito.some(i=> !Number.isInteger(i.precio))) return alert('Precio inválido en items');
-    const detalle = carrito.map(i=> `${i.cantidad} x ${i.nombre}`).join(', ');
-    const total = carrito.reduce((s,i)=> s + (i.precio * i.cantidad), 0);
-    // registrar pedido (pendiente)
-    const url = `${GOOGLE_SHEETS_API}?action=registrarPedido&nombre=${encodeURIComponent('Cliente')}&telefono=${encodeURIComponent(telefono)}&detalle=${encodeURIComponent(detalle)}&total=${encodeURIComponent(total)}`;
-    const res = await fetch(url);
-    const json = await res.json();
-    if (json && json.success){
-      // notificar a Wimpy por WhatsApp
-      const waNumero = numeroWimpy.replace(/\+/g,'').replace(/\s+/g,'');
-      const msg = encodeURIComponent(`Nuevo pedido\nTel: ${telefono}\nPedido: ${detalle}\nTotal: $${Number(total).toLocaleString('es-CO')}`);
-      window.open(`https://wa.me/${waNumero}?text=${msg}`,'_blank');
-      alert('Pedido enviado. Quedó como PENDIENTE para aprobación del admin.');
-      carrito = []; updateCartUI(); await cargarHistorial();
+    
+    const pin = prompt("🔒 Ingrese el PIN de administrador:");
+    if (pin === ADMIN_PIN_CLIENTE) { 
+        adminAcceso = true;
+        alert("Acceso concedido ✅. Panel de Administración visible.");
+        document.getElementById('navAdmin').classList.remove('oculto');
+        
+        // Carga de datos de configuración al acceder
+        obtenerDatosAdmin();
+        mostrar('adminPanel');
     } else {
-      alert('Error registrando pedido');
+        alert("PIN incorrecto o acceso denegado ❌");
     }
-  });
+}
 
-  // ---------- CLIENTE: CONFIRMAR ENTREGA ----------
-  async function renderPendientesCliente(){
-    $('#listaPendientesCliente').innerHTML = '';
-    const tel = $('#inputTelefonoConfirm').value.trim();
-    if (!tel) { $('#listaPendientesCliente').innerHTML = '<div class="muted">Ingresa tu teléfono arriba</div>'; return; }
-    const lista = historial.filter(h => (h.telefono||'').includes(tel) && (h.estado||'').toLowerCase()==='aprobado');
-    if (!lista.length) { $('#listaPendientesCliente').innerHTML = '<div class="muted">No tienes entregas pendientes aprobadas.</div>'; return; }
-    lista.forEach(h=>{
-      const el = document.createElement('div'); el.className='card';
-      el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-        <div><div style="font-weight:700">${esc(h.detalle)}</div><div class="muted">Total: $${Number(h.total||0).toLocaleString('es-CO')}</div></div>
-        <div><button class="btn small" data-confirm="${h.timestamp}">Confirmar entrega</button></div>
-      </div>`;
-      $('#listaPendientesCliente').appendChild(el);
-    });
-    $('#listaPendientesCliente').querySelectorAll('button[data-confirm]').forEach(b=>{
-      b.addEventListener('click', async ()=>{
-        const ts = b.dataset.confirm;
-        if (!confirm('Confirmar que recibiste el pedido?')) return;
-        const res = await fetchJSON(GOOGLE_SHEETS_API + `?action=confirmarEntrega&timestamp=${encodeURIComponent(ts)}`);
-        if (res && res.success){ alert('Entrega confirmada. Gracias.'); await cargarHistorial(); renderPendientesCliente(); renderDashboard(); }
-        else alert('Error');
-      });
-    });
-  }
-  $('#inputTelefonoConfirm').addEventListener('change', renderPendientesCliente);
+async function obtenerDatosAdmin() {
+    if (!adminAcceso) return;
 
-  // ---------- AGREGAR CLIENTE (ADMIN) ----------
-  $('#btnAddCliente').addEventListener('click', async ()=>{
-    if (!isAdmin) return alert('Acceso admin requerido');
-    const nombre = $('#cliNombre').value.trim(); const telefono = $('#cliTelefono').value.trim();
-    if (!nombre || !telefono) return alert('Completa nombre y teléfono');
-    const res = await fetchJSON(GOOGLE_SHEETS_API + `?action=agregarCliente&telefono=${encodeURIComponent(telefono)}&nombre=${encodeURIComponent(nombre)}&email=`);
-    if (res && res.success){ $('#cliNombre').value=''; $('#cliTelefono').value=''; await cargarClientes(); renderClientes(); alert('Cliente agregado'); }
-    else alert('Error');
-  });
+    // 1. Obtener Configuración de Wimpy y Empresas
+    try {
+        const formData = new FormData();
+        formData.append('action', 'obtenerConfiguracion'); // STUB: No implementado en el backend, usar lógica directa
+        formData.append('pin', ADMIN_PIN_CLIENTE);
+        
+        // Asumiendo que obtienes la configuración de Wimpy y Empresa ID 1:
+        const config = await llamarAPIAdmin('obtenerConfiguracionMap'); // Nueva función STUB en backend
+        const empresa = await llamarAPIAdmin('obtenerEmpresaContratante');
+        
+        // Rellenar Configuración de Wimpy (Ejemplo con STUB)
+        document.getElementById('wimpyNombre').value = "Wimpy Restaurante & Cafetería";
+        document.getElementById('wimpyNIT').value = "900123456-7";
+        document.getElementById('assetsURL').textContent = "Cargando..."; // Se actualizará en el POST
 
-  // ---------- AGREGAR PRODUCTO ----------
-  $('#btnAddProducto').addEventListener('click', async ()=>{
-    if (!isAdmin) return alert('Acceso admin requerido');
-    const nombre = $('#prodNombre').value.trim(); const precioRaw = $('#prodPrecio').value.trim();
-    const precio = parseInt(precioRaw,10);
-    if (!nombre || isNaN(precio)) return alert('Nombre y precio entero requerido');
-    const res = await fetchJSON(GOOGLE_SHEETS_API + `?action=agregarProducto&nombre=${encodeURIComponent(nombre)}&precio=${encodeURIComponent(precio)}`);
-    if (res && res.success){ $('#prodNombre').value=''; $('#prodPrecio').value=''; await cargarProductos(); renderProducts(); renderProductosAdmin(); alert('Producto agregado'); }
-    else alert('Error');
-  });
+        // Rellenar Empresa Contratante (Usando datos reales del backend)
+        if (empresa.success) {
+            document.getElementById('empresaNombre').value = empresa.empresa.nombre;
+            document.getElementById('empresaNIT').value = empresa.empresa.nit;
+            document.getElementById('empresaCorreo').value = empresa.empresa.correo;
+            document.getElementById('empresaContacto').value = empresa.empresa.contacto;
+            
+            document.getElementById('facturaData').textContent = `Mes Actual / ${empresa.empresa.nombre}`;
+        }
+        
+    } catch (e) {
+        console.error("Error al cargar datos administrativos:", e);
+    }
+}
 
-  // ---------- ADMIN: ACCESS ----------
-  $('#adminBtn').addEventListener('click', ()=>{
-    const pin = prompt('Ingrese PIN administrador:');
-    if (pin === ADMIN_PIN){
-      isAdmin = true;
-      $$('.tab.hidden').forEach(x=> x.classList.remove('hidden'));
-      alert('Acceso admin concedido'); document.querySelector('.tab[data-view="dashboard"]').click();
-    } else alert('PIN incorrecto');
-  });
+async function llamarAPIAdmin(action, params = {}) {
+    if (!adminAcceso) return { success: false, error: "Acceso restringido" };
+    
+    const formData = new FormData();
+    formData.append('action', action);
+    formData.append('pin', ADMIN_PIN_CLIENTE); 
+    
+    for (const key in params) {
+        formData.append(key, params[key]);
+    }
 
-  // ---------- CONFIG GUARDAR ----------
-  $('#btnGuardarConfig').addEventListener('click', async ()=>{
-    if (!isAdmin) return alert('Acceso admin requerido');
-    const val = $('#configNumero').value.trim();
-    if (!val) return alert('Ingresa número');
-    await guardarConfiguracion(val); await cargarConfiguracion();
-  });
-  $('#btnReiniciarConfig').addEventListener('click', async ()=>{ await cargarConfiguracion(); $('#configNumero').value = numeroWimpy; alert('Restaurado'); });
+    try {
+        const response = await fetch(GOOGLE_SHEETS_API, { method: 'POST', body: formData });
+        return await response.json();
+    } catch (error) {
+        return { success: false, error: 'Error de conexión con la API.' };
+    }
+}
 
-  // ---------- HISTORIAL: EXPORT CSV ----------
-  $('#btnExportCsv').addEventListener('click', ()=>{
-    if (!isAdmin) return alert('Acceso admin requerido');
-    const csvRows = [['fecha','hora','telefono','nombre','detalle','total','estado']];
-    historial.forEach(h=> csvRows.push([h.fecha, h.hora, h.telefono, h.nombre, '"'+(h.detalle||'')+'"', h.total, h.estado]));
-    const csv = csvRows.map(r=> r.join(',')).join('\\n');
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'historial_wimpy.csv'; a.click(); URL.revokeObjectURL(url);
-  });
+// ------------------------------------------------------------------
+// --- FUNCIONES DE PEDIDO (Públicas) ---
+// ------------------------------------------------------------------
 
-  // ---------- DASHBOARD REFRESH & SEARCH HANDLERS ----------
-  $('#filtroEstado').addEventListener('change', renderHistorial);
-  $('#filtroSearchHist').addEventListener('input', renderHistorial);
-  $('#filtroProducto').addEventListener('input', renderProductosAdmin);
-  $('#filtroClienteSearch').addEventListener('input', renderClientes);
-  $('#searchProducto').addEventListener('input', renderProducts);
+async function obtenerConfiguracionPublica() {
+    // Implementación para obtener estado del menú
+}
 
-  // ---------- UTILS ----------
-  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+async function registrarPedido() {
+    const nombre = document.getElementById("nombreCliente").value.trim();
+    const telefono = document.getElementById("telefonoCliente").value.trim();
+    const detalle = document.getElementById("detallePedido").value.trim();
+    const total = document.getElementById("totalPedido").value.trim();
 
-  // ---------- RELOADS (background simple) ----------
-  // cada 60s actualiza historial/productos (opcional)
-  setInterval(async ()=>{
-    await cargarHistorial(); await cargarProductos(); renderProducts(); renderHistorial(); renderDashboard();
-  }, 60000);
+    if (!nombre || !telefono || !detalle || !total) {
+        mostrarMensaje('pedidoMessage', "Por favor, complete todos los campos del pedido.", 'error');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'registrarPedido');
+    formData.append('nombre', nombre);
+    formData.append('telefono', telefono);
+    formData.append('detalle', detalle);
+    formData.append('total', total);
+    
+    const data = await llamarAPIAdmin('registrarPedido', { nombre, telefono, detalle, total });
 
-  </script>
+    if (data.success) {
+        mostrarMensaje('pedidoMessage', "✅ Pedido registrado: " + data.message, 'success');
+        document.getElementById("nombreCliente").value = '';
+        document.getElementById("detallePedido").value = '';
+        // Teléfono y total se pueden mantener si el empleado hace varios
+    } else {
+        mostrarMensaje('pedidoMessage', "Error al registrar: " + data.error, 'error');
+    }
+}
+
+// ------------------------------------------------------------------
+// --- GESTIÓN DE CLIENTES (CRUD) ---
+// ------------------------------------------------------------------
+
+async function obtenerClientes() {
+    const data = await llamarAPIAdmin('obtenerClientes');
+    const tbody = document.querySelector('#tablaClientes tbody');
+    tbody.innerHTML = '';
+    
+    if (data.success && data.clientes) {
+        data.clientes.forEach(cliente => {
+            const row = tbody.insertRow();
+            row.insertCell().textContent = cliente.nombre;
+            row.insertCell().textContent = cliente.telefono;
+            row.insertCell().textContent = cliente.idEmpresa || 1;
+            const cellAccion = row.insertCell();
+            const btn = document.createElement('button');
+            btn.textContent = 'Eliminar';
+            btn.className = 'btn btn-red';
+            btn.onclick = () => eliminarCliente(cliente.telefono);
+            cellAccion.appendChild(btn);
+        });
+    } else {
+        tbody.innerHTML = '<tr><td colspan="4">No hay clientes registrados.</td></tr>';
+    }
+}
+
+async function agregarCliente() {
+    const nombre = document.getElementById('newClienteNombre').value.trim();
+    const telefono = document.getElementById('newClienteTelefono').value.trim();
+    
+    if (!nombre || !telefono) {
+        mostrarMensaje('clienteMessage', 'Nombre y teléfono son obligatorios.', 'error');
+        return;
+    }
+    
+    const data = await llamarAPIAdmin('agregarCliente', { nombre, telefono, idEmpresa: 1 });
+    
+    if (data.success) {
+        mostrarMensaje('clienteMessage', data.message, 'success');
+        document.getElementById('newClienteNombre').value = '';
+        document.getElementById('newClienteTelefono').value = '';
+        obtenerClientes(); // Recargar la tabla
+    } else {
+        mostrarMensaje('clienteMessage', data.error, 'error');
+    }
+}
+
+async function eliminarCliente(telefono) {
+    if (!confirm(`¿Está seguro de eliminar al cliente con teléfono ${telefono}?`)) return;
+    
+    const data = await llamarAPIAdmin('eliminarCliente', { telefono });
+    
+    if (data.success) {
+        mostrarMensaje('clienteMessage', data.message, 'success');
+        obtenerClientes(); // Recargar la tabla
+    } else {
+        mostrarMensaje('clienteMessage', data.error, 'error');
+    }
+}
+
+// ------------------------------------------------------------------
+// --- GESTIÓN DE PRODUCTOS (CRUD) ---
+// ------------------------------------------------------------------
+
+async function obtenerProductosAdmin() {
+    const data = await llamarAPIAdmin('obtenerProductosAdmin');
+    const tbody = document.querySelector('#tablaProductos tbody');
+    tbody.innerHTML = '';
+    
+    if (data.success && data.productos) {
+        data.productos.forEach(producto => {
+            const row = tbody.insertRow();
+            row.insertCell().textContent = producto.id;
+            row.insertCell().textContent = producto.nombre;
+            row.insertCell().textContent = producto.precio;
+            row.insertCell().textContent = producto.activo ? 'Sí' : 'No';
+            const cellAccion = row.insertCell();
+            const btn = document.createElement('button');
+            btn.textContent = 'Eliminar';
+            btn.className = 'btn btn-red';
+            btn.onclick = () => eliminarProducto(producto.id);
+            cellAccion.appendChild(btn);
+        });
+    } else {
+        tbody.innerHTML = '<tr><td colspan="5">No hay productos registrados.</td></tr>';
+    }
+}
+
+async function agregarProducto() {
+    const nombre = document.getElementById('newProductoNombre').value.trim();
+    const precio = document.getElementById('newProductoPrecio').value.trim();
+    
+    if (!nombre || !precio) {
+        mostrarMensaje('productoMessage', 'Nombre y precio son obligatorios.', 'error');
+        return;
+    }
+    
+    const data = await llamarAPIAdmin('agregarProducto', { nombre, precio });
+    
+    if (data.success) {
+        mostrarMensaje('productoMessage', data.message, 'success');
+        document.getElementById('newProductoNombre').value = '';
+        document.getElementById('newProductoPrecio').value = '';
+        obtenerProductosAdmin();
+    } else {
+        mostrarMensaje('productoMessage', data.error, 'error');
+    }
+}
+
+async function eliminarProducto(idProducto) {
+    if (!confirm(`¿Está seguro de eliminar el producto ID ${idProducto}?`)) return;
+    
+    const data = await llamarAPIAdmin('eliminarProducto', { idProducto });
+    
+    if (data.success) {
+        mostrarMensaje('productoMessage', data.message, 'success');
+        obtenerProductosAdmin();
+    } else {
+        mostrarMensaje('productoMessage', data.error, 'error');
+    }
+}
+
+// ------------------------------------------------------------------
+// --- GESTIÓN DE FACTURACIÓN (LLAMADAS STUB) ---
+// ------------------------------------------------------------------
+
+async function llamarFacturacion(action) {
+    const data = await llamarAPIAdmin(action, { idEmpresa: 1, mesFacturado: 'Octubre 2025' });
+
+    if (data.success) {
+        mostrarMensaje('facturaMessage', data.message, 'success');
+        // Si el backend devuelve la URL de assets, la actualizamos
+        if (data.assetsUrl) {
+            document.getElementById('assetsURL').textContent = data.assetsUrl;
+        }
+    } else {
+        mostrarMensaje('facturaMessage', 'Error: ' + data.error, 'error');
+    }
+}
+
+function generarCuentaCobroPDF() {
+    llamarFacturacion('generarCuentaCobroPDF');
+}
+
+function generarDetalleExcel() {
+    llamarFacturacion('generarDetalleExcel');
+}
+
+function reenviarEmailCuentaCobro() {
+    llamarFacturacion('reenviarEmailCuentaCobro');
+}
+
+// ------------------------------------------------------------------
+// --- GESTIÓN DE CONFIGURACIÓN (Guarda campos individuales) ---
+// ------------------------------------------------------------------
+
+async function guardarConfiguracionWimpy() {
+    const campos = {
+        'WIMPY_NOMBRE': document.getElementById('wimpyNombre').value.trim(),
+        'WIMPY_NIT': document.getElementById('wimpyNIT').value.trim(),
+        'WIMPY_DIRECCION': document.getElementById('wimpyDireccion').value.trim(),
+        'WIMPY_TELEFONO': document.getElementById('wimpyTelefono').value.trim(),
+        'WIMPY_CORREO': document.getElementById('wimpyCorreo').value.trim(),
+        // STUB para crear carpeta de Assets la primera vez
+        'WIMPY_LOGO_URL': true // Se usa un valor booleano para disparar la lógica de creación de Drive en el backend
+    };
+
+    let allSuccess = true;
+    for (const [campo, valor] of Object.entries(campos)) {
+        const data = await llamarAPIAdmin('guardarConfiguracionWimpy', { campo, valor });
+        if (!data.success) {
+            allSuccess = false;
+            mostrarMensaje('configMessage', `Error al guardar ${campo}: ${data.error}`, 'error');
+            break;
+        } else if (campo === 'WIMPY_LOGO_URL' && data.assetsUrl) {
+            // Si es la URL de Assets, actualizamos la interfaz
+            document.getElementById('assetsURL').textContent = data.assetsUrl;
+        }
+    }
+
+    if (allSuccess) {
+        mostrarMensaje('configMessage', '✅ Configuración de Wimpy guardada correctamente.', 'success');
+    }
+}
+
+async function guardarEmpresaContratante() {
+    const params = {
+        idEmpresa: 1,
+        nombre: document.getElementById('empresaNombre').value.trim(),
+        nit: document.getElementById('empresaNIT').value.trim(),
+        correo: document.getElementById('empresaCorreo').value.trim(),
+        contacto: document.getElementById('empresaContacto').value.trim()
+    };
+    
+    const data = await llamarAPIAdmin('guardarEmpresaContratante', params);
+    
+    if (data.success) {
+        mostrarMensaje('configMessage', '✅ Datos de la Empresa Contratante guardados.', 'success');
+    } else {
+        mostrarMensaje('configMessage', 'Error al guardar empresa: ' + data.error, 'error');
+    }
+}
+
+</script>
 </body>
 </html>

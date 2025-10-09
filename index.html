@@ -1,146 +1,790 @@
-// === WIMPY APP V3.4 - BACKEND CON BACKUP DIARIO, PUNTOS Y CONTROL ADMIN ===
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wimpy App - Pedidos B2B</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 0; }
+        header { background-color: #1f1f1f; padding: 15px; text-align: center; font-size: 1.4em; color: #fff; }
+        nav { display: flex; justify-content: space-around; background-color: #1f1f1f; padding: 10px; position: sticky; top: 0; }
+        nav button { background-color: #333; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+        nav button:hover { background-color: #555; }
+        section { padding: 15px; }
+        .oculto { display: none; }
+        .admin-btn { position: fixed; bottom: 10px; right: 10px; background: #4e44e2; color: white; padding: 12px; border: none; border-radius: 50%; font-size: 1.2em; cursor: pointer; z-index: 1000; }
+        .admin-panel { background-color: #1f1f1f; padding: 20px; border-radius: 8px; margin-top: 15px; }
+        label { display: block; margin-top: 10px; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="number"], textarea { width: 95%; padding: 10px; margin-bottom: 10px; border: 1px solid #333; border-radius: 4px; background-color: #2c2c2c; color: #e0e0e0; }
+        .btn { background-color: #4e44e2; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        .btn-secondary { background-color: #555; }
+        .btn-danger { background-color: #e24444; }
+        .mensaje { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .mensaje.success { background-color: #44e24e50; border: 1px solid #44e24e; color: #fff; }
+        .mensaje.error { background-color: #e2444450; border: 1px solid #e24444; color: #fff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #333; font-size: 0.9em; }
+        th { background-color: #2c2c2c; }
+        .modal { position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #1f1f1f; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; border-radius: 8px; }
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+        .close:hover, .close:focus { color: #fff; text-decoration: none; cursor: pointer; }
+    </style>
+</head>
+<body>
 
-const WIMPY_ADMIN_EMAIL = "Wimpyrestaurantecafeteria@gmail.com";
-const ADMIN_PIN = "1995";
+<header>Wimpy App - Pedidos B2B</header>
 
-// ----------------------------------------------------
-// 💲 CONFIGURACIÓN DE PUNTOS (2% de Retorno)
-// ----------------------------------------------------
-const PUNTOS_POR_CADA_X_PESOS = 1000; // 1 punto se gana por cada $1000 COP
-const PUNTOS_VALOR_DESCUENTO = 20;    // 1 punto equivale a $20 COP de descuento (2% de retorno)
+<nav>
+    <button onclick="mostrar('pedidos')">🛒 Pedido</button>
+    <button onclick="mostrar('admin')">💼 Admin</button>
+</nav>
 
-const SHEET_NAMES = {
-  CLIENTES: 'Clientes',
-  HISTORIAL: 'Historial',
-  PRODUCTOS: 'Productos',
-  CONFIG: 'Configuración',
-  EMPRESAS: 'Empresas' 
-};
+<section id="pedidos">
+    <h2>Realizar Nuevo Pedido</h2>
+    <div id="pedidoMessage" class="mensaje oculto"></div>
 
-function json(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+    <label for="telefonoCliente">Teléfono (WhatsApp):</label>
+    <input type="number" id="telefonoCliente" oninput="buscarPuntosCliente()" required>
 
-// ----------------------------------------------------
-// ⚙️ UTILIDADES DE SISTEMA Y CONFIGURACIÓN
-// ----------------------------------------------------
+    <div id="puntosDisplay" style="margin: 10px 0; padding: 10px; border: 1px solid #4e44e2; border-radius: 5px; background-color: #333;">
+        Ingrese su teléfono para ver sus **Puntos Wimpy**.
+    </div>
 
-function setupSheets(ss) {
-  let configSheet = ss.getSheetByName(SHEET_NAMES.CONFIG);
-  if (!configSheet) {
-    configSheet = ss.insertSheet(SHEET_NAMES.CONFIG);
-    configSheet.appendRow(['Campo', 'Valor']);
-    configSheet.appendRow(['numero_wimpy', '57311XXXXXXX']);
-    configSheet.appendRow(['WIMPY_NOMBRE', 'Wimpy Restaurante']);
-    configSheet.appendRow(['MENU_DISPONIBLE', 'Sí']);
-    configSheet.appendRow(['URL_POLITICA_DATOS', 'PEGAR_URL_DEL_GOOGLE_DOC_AQUÍ']);
-    configSheet.appendRow(['PROGRAMA_PUNTOS_ACTIVO', 'No']); 
-    // NUEVA CLAVE para la funcionalidad de Backup
-    configSheet.appendRow(['ID_CARPETA_BACKUP', 'PEGAR_ID_DE_CARPETA_DE_DRIVE_AQUÍ']); 
-  }
-  
-  // Asegura la existencia de claves de control (Puntos y Backup)
-  const existingKeys = configSheet.getDataRange().getValues().map(row => row[0]);
-  if (!existingKeys.includes('PROGRAMA_PUNTOS_ACTIVO')) { configSheet.appendRow(['PROGRAMA_PUNTOS_ACTIVO', 'No']); }
-  if (!existingKeys.includes('ID_CARPETA_BACKUP')) { configSheet.appendRow(['ID_CARPETA_BACKUP', 'PEGAR_ID_DE_CARPETA_DE_DRIVE_AQUÍ']); }
-  
-  // Asegura las columnas correctas en Clientes (omisión de detalles por brevedad)
-}
+    <label for="nombreCliente">Nombre (Para seguimiento):</label>
+    <input type="text" id="nombreCliente" required>
 
-function validarAdminPin(pin, ss) {
-  return pin === ADMIN_PIN; // Simulación simple
-}
+    <label for="detallePedido">Detalle del Pedido (Ej. 2 Bandejas, 1 Sandwich de Pollo):</label>
+    <textarea id="detallePedido" rows="3" required></textarea>
 
-function obtenerConfiguracionMap(ss) {
-    const hojaConfig = ss.getSheetByName(SHEET_NAMES.CONFIG);
-    const data = hojaConfig.getDataRange().getValues();
-    const config = {};
-    data.forEach(row => {
-        config[row[0]] = row[1];
-    });
-    return config;
-}
-
-// ... (verificarCliente, guardarConfiguracion se mantienen) ...
-
-// ----------------------------------------------------
-// 💾 GESTIÓN DE PEDIDOS (CON VALIDACIÓN DE PUNTOS)
-// ----------------------------------------------------
-
-function registrarPedido(e, ss) {
-  // ... (Lógica de validación, acumulación y canje de puntos se mantiene, ajustada a $20) ...
-}
-
-// ----------------------------------------------------
-// 🏅 GESTIÓN DE PUNTOS DE LEALTAD
-// ----------------------------------------------------
-
-function gestionPuntos(e, ss) {
-  // ... (Lógica de verificación de actividad de puntos y saldo se mantiene) ...
-}
-
-// ----------------------------------------------------
-// 💾 BACKUP DIARIO (NUEVA FUNCIÓN REQUERIDA)
-// ----------------------------------------------------
-
-/**
- * Crea una copia de la Hoja de Cálculo activa y la guarda en la carpeta de Backup.
- * Debe ser ejecutada por un Trigger de tiempo diario.
- */
-function dailyBackup() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const config = obtenerConfiguracionMap(ss);
-    const folderId = config['ID_CARPETA_BACKUP']; 
+    <label for="totalPedido">Total a Facturar (COP):</label>
+    <input type="number" id="totalPedido" value="0" required>
     
-    if (!folderId || folderId.includes('PEGAR_ID_DE_CARPETA_DE_DRIVE_AQUÍ')) {
-        Logger.log('ERROR: El ID de la Carpeta de Backup no está configurado. No se puede realizar el backup.');
+    <div id="canjePuntosDiv" style="margin-top: 15px;" class="oculto">
+        <label for="puntosACanjear">Puntos a Canjear (1 punto = $20 COP de descuento):</label>
+        <input type="number" id="puntosACanjear" value="0" min="0">
+    </div>
+
+    <div style="margin-top: 15px; border: 1px dashed #555; padding: 10px; border-radius: 5px;">
+        <input type="checkbox" id="autorizaDatos" style="transform: scale(1.2); margin-right: 5px;">
+        <label for="autorizaDatos" style="display: inline;">Autorizo el tratamiento de mis datos personales según la <a href="#" id="politicaLink" target="_blank" style="color: #4e44e2;">Política de Wimpy</a>.</label>
+    </div>
+
+    <button class="btn" onclick="registrarPedido()">Enviar Pedido</button>
+</section>
+
+<section id="admin" class="oculto">
+    <h2>Panel de Administrador</h2>
+    <div id="adminMessage" class="mensaje oculto"></div>
+    <nav>
+        <button onclick="mostrarAdminSection('configuracion')">⚙️ Configuración</button>
+        <button onclick="mostrarAdminSection('clientes')">👥 Clientes</button>
+        <button onclick="mostrarAdminSection('productos')">🍕 Productos</button>
+        <button onclick="mostrarAdminSection('historial')">🧾 Historial</button>
+        <button onclick="mostrarAdminSection('mensajeria')">📧 Mensajería</button>
+    </nav>
+    <div id="admin-content">
+        <p>Seleccione una opción del menú superior.</p>
+    </div>
+</section>
+
+<section id="configuracion" class="oculto admin-section">
+    <h2>⚙️ Configuración Empresarial</h2>
+    <div id="configMessage" class="mensaje oculto"></div>
+
+    <h3>Datos de Contacto Wimpy</h3>
+    <label for="numeroWimpy">Teléfono de Contacto (WhatsApp):</label>
+    <input type="text" id="numeroWimpy">
+    <label for="nombreWimpy">Nombre del Establecimiento:</label>
+    <input type="text" id="nombreWimpy">
+    <label for="menuDisponible">Menú Disponible (Sí/No):</label>
+    <input type="checkbox" id="menuDisponible">
+    
+    <hr>
+    <h3>Programa de Lealtad (Puntos Wimpy)</h3>
+    <label for="programaPuntosActivo" style="display: inline-block; margin-right: 10px;">Activar Programa de Puntos (1 punto = $20 COP de descuento):</label>
+    <input type="checkbox" id="programaPuntosActivo" style="transform: scale(1.5);">
+    
+    <button class="btn" onclick="guardarConfiguracion()" style="margin-top: 20px;">Guardar Configuración</button>
+</section>
+
+<section id="clientes" class="oculto admin-section">
+    <h2>👥 Clientes Registrados</h2>
+    <div id="clientesMessage" class="mensaje oculto"></div>
+    <button class="btn btn-secondary" onclick="mostrarModal('agregarClienteModal')">Agregar Nuevo Cliente</button>
+    <div id="tablaClientes">Cargando...</div>
+</section>
+
+<section id="productos" class="oculto admin-section">
+    <h2>🍕 Gestión de Productos</h2>
+    <div id="productosMessage" class="mensaje oculto"></div>
+    <button class="btn btn-secondary" onclick="mostrarModal('agregarProductoModal')">Agregar Nuevo Producto</button>
+    
+    <h3 style="margin-top: 20px;">Ranking: Top 5 Productos más Vendidos</h3>
+    <div id="topProductosList">Cargando...</div>
+
+    <h3 style="margin-top: 20px;">Lista Completa de Productos</h3>
+    <div id="tablaProductos">Cargando...</div>
+</section>
+
+<section id="historial" class="oculto admin-section">
+    <h2>🧾 Historial de Pedidos</h2>
+    <div id="tablaHistorial">Cargando...</div>
+</section>
+
+<section id="mensajeria" class="oculto admin-section">
+    <h2>📧 Mensajería Promocional</h2>
+    <div id="mensajeriaMessage" class="mensaje oculto"></div>
+    <p>Genere una lista de clientes que autorizaron recibir promociones para usar en su Lista de Difusión/Grupo de WhatsApp.</p>
+    
+    <label for="mensajePromocional">Mensaje a Enviar (Opcional, solo para referencia):</label>
+    <textarea id="mensajePromocional" rows="3"></textarea>
+    
+    <button class="btn" onclick="generarContactosPromocionales()">Generar Lista de Contactos</button>
+    
+    <h3 style="margin-top: 20px;">Contactos Autorizados:</h3>
+    <div id="listaContactosGenerada" style="white-space: pre-wrap; background-color: #2c2c2c; padding: 10px; border-radius: 4px;"></div>
+</section>
+
+<div id="agregarClienteModal" class="modal oculto">
+    <div class="modal-content">
+        <span class="close" onclick="cerrarModal('agregarClienteModal')">&times;</span>
+        <h3>Agregar Nuevo Cliente</h3>
+        <label for="nuevoClienteNombre">Nombre:</label>
+        <input type="text" id="nuevoClienteNombre">
+        <label for="nuevoClienteTelefono">Teléfono:</label>
+        <input type="number" id="nuevoClienteTelefono">
+        <div style="margin: 10px 0;">
+            <input type="checkbox" id="nuevoClienteAutorizaMensajes" style="transform: scale(1.2); margin-right: 5px;">
+            <label for="nuevoClienteAutorizaMensajes" style="display: inline;">Autoriza Envío de Promociones</label>
+        </div>
+        <div style="margin: 10px 0;">
+            <input type="checkbox" id="nuevoClienteAutorizaDatos" style="transform: scale(1.2); margin-right: 5px;">
+            <label for="nuevoClienteAutorizaDatos" style="display: inline;">Autoriza Tratamiento de Datos (Obligatorio para Pedidos)</label>
+        </div>
+        <button class="btn" onclick="agregarCliente()">Guardar Cliente</button>
+    </div>
+</div>
+
+<div id="editarClienteModal" class="modal oculto">
+    <div class="modal-content">
+        <span class="close" onclick="cerrarModal('editarClienteModal')">&times;</span>
+        <h3>Editar Cliente</h3>
+        <input type="hidden" id="editClienteTelefonoOriginal">
+        <label for="editClienteNombre">Nombre:</label>
+        <input type="text" id="editClienteNombre">
+        <label for="editClienteTelefono">Teléfono:</label>
+        <input type="number" id="editClienteTelefono">
+        <div style="margin: 10px 0;">
+            <input type="checkbox" id="editClienteAutorizaMensajes" style="transform: scale(1.2); margin-right: 5px;">
+            <label for="editClienteAutorizaMensajes" style="display: inline;">Autoriza Envío de Promociones</label>
+        </div>
+        <div style="margin: 10px 0;">
+            <input type="checkbox" id="editClienteAutorizaDatos" style="transform: scale(1.2); margin-right: 5px;">
+            <label for="editClienteAutorizaDatos" style="display: inline;">Autoriza Tratamiento de Datos</label>
+        </div>
+        <button class="btn" onclick="guardarEdicionCliente()">Guardar Cambios</button>
+    </div>
+</div>
+
+<div id="agregarProductoModal" class="modal oculto">
+    <div class="modal-content">
+        <span class="close" onclick="cerrarModal('agregarProductoModal')">&times;</span>
+        <h3>Agregar Nuevo Producto</h3>
+        <label for="nuevoProductoNombre">Nombre:</label>
+        <input type="text" id="nuevoProductoNombre">
+        <label for="nuevoProductoPrecio">Precio:</label>
+        <input type="number" id="nuevoProductoPrecio">
+        <div style="margin: 10px 0;">
+            <input type="checkbox" id="nuevoProductoActivo" checked style="transform: scale(1.2); margin-right: 5px;">
+            <label for="nuevoProductoActivo" style="display: inline;">Activo</label>
+        </div>
+        <button class="btn" onclick="agregarProducto()">Guardar Producto</button>
+    </div>
+</div>
+
+<div id="editarProductoModal" class="modal oculto">
+    <div class="modal-content">
+        <span class="close" onclick="cerrarModal('editarProductoModal')">&times;</span>
+        <h3>Editar Producto</h3>
+        <input type="hidden" id="editProductoID">
+        <label for="editProductoNombre">Nombre:</label>
+        <input type="text" id="editProductoNombre">
+        <label for="editProductoPrecio">Precio:</label>
+        <input type="number" id="editProductoPrecio">
+        <div style="margin: 10px 0;">
+            <input type="checkbox" id="editProductoActivo" style="transform: scale(1.2); margin-right: 5px;">
+            <label for="editProductoActivo" style="display: inline;">Activo</label>
+        </div>
+        <button class="btn" onclick="guardarEdicionProducto()">Guardar Cambios</button>
+    </div>
+</div>
+
+<button class="admin-btn" onclick="accederAdmin()">🔒</button>
+
+<script>
+// === CONFIGURACIÓN CRÍTICA DEL SISTEMA ===
+// URL de Despliegue de tu Google Apps Script (API Backend)
+const GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec'; 
+let adminAcceso = false;
+const ADMIN_PIN_CLIENTE = "1995";
+const STORAGE_CONSENT = 'wimpy_data_consent'; 
+let puntosMaximos = 0; // Almacena el saldo de puntos disponible
+
+// Inicializar la App
+document.addEventListener('DOMContentLoaded', () => {
+    mostrar('pedidos');
+    const storedConsent = localStorage.getItem(STORAGE_CONSENT);
+    if (storedConsent === 'true') {
+        document.getElementById('autorizaDatos').checked = true;
+    }
+    // Cargar la URL de la política de datos
+    cargarPoliticaUrl(); 
+});
+
+// ------------------------------------------------------------------
+// --- UTILIDADES GLOBALES ---
+// ------------------------------------------------------------------
+
+function mostrar(seccion) {
+    document.querySelectorAll('section').forEach(s => s.classList.add('oculto'));
+    document.getElementById(seccion).classList.remove('oculto');
+    if (seccion === 'admin') {
+        mostrarAdminSection('configuracion'); // Mostrar configuración por defecto al entrar a Admin
+    }
+}
+
+function mostrarAdminSection(seccion) {
+    document.querySelectorAll('.admin-section').forEach(s => s.classList.add('oculto'));
+    document.getElementById(seccion).classList.remove('oculto');
+    if (seccion === 'clientes') cargarClientes();
+    if (seccion === 'productos') cargarProductos();
+    if (seccion === 'historial') cargarHistorial();
+    if (seccion === 'configuracion') cargarConfiguracion();
+}
+
+function mostrarMensaje(id, texto, tipo) {
+    const elemento = document.getElementById(id);
+    elemento.textContent = texto;
+    elemento.className = `mensaje ${tipo}`;
+    elemento.classList.remove('oculto');
+    setTimeout(() => {
+        elemento.classList.add('oculto');
+    }, 5000);
+}
+
+function mostrarModal(id) {
+    document.getElementById(id).classList.remove('oculto');
+}
+
+function cerrarModal(id) {
+    document.getElementById(id).classList.add('oculto');
+}
+
+// ------------------------------------------------------------------
+// --- ACCESO DE ADMINISTRADOR ---
+// ------------------------------------------------------------------
+
+function accederAdmin() {
+    const pin = prompt("Ingrese el PIN de administrador:");
+    if (pin === ADMIN_PIN_CLIENTE) {
+        adminAcceso = true;
+        alert("Acceso concedido ✅");
+        mostrar('admin');
+    } else {
+        alert("PIN incorrecto ❌");
+    }
+}
+
+async function llamarAPIAdmin(action, params = {}) {
+    if (!adminAcceso) {
+        mostrarMensaje('adminMessage', 'Acceso denegado. PIN incorrecto.', 'error');
+        return { success: false, error: 'Acceso denegado' };
+    }
+    const formData = new FormData();
+    formData.append('action', action);
+    formData.append('pin', ADMIN_PIN_CLIENTE); 
+    
+    for (const key in params) {
+        formData.append(key, params[key]);
+    }
+
+    try {
+        const response = await fetch(GOOGLE_SHEETS_API, { method: 'POST', body: formData });
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        mostrarMensaje('adminMessage', 'Error de conexión con la API.', 'error');
+        console.error('API Error:', error);
+        return { success: false, error: 'Error de conexión' };
+    }
+}
+
+// ------------------------------------------------------------------
+// --- GESTIÓN DE PUNTOS Y RECOMPENSAS ---
+// ------------------------------------------------------------------
+
+async function buscarPuntosCliente() {
+    const telefono = document.getElementById('telefonoCliente').value.trim();
+    const puntosDisplay = document.getElementById('puntosDisplay');
+    const canjeDiv = document.getElementById('canjePuntosDiv');
+    
+    if (telefono.length < 7) { 
+        puntosDisplay.innerHTML = 'Ingrese su teléfono para ver sus **Puntos Wimpy**.';
+        canjeDiv.classList.add('oculto');
+        puntosMaximos = 0;
         return;
     }
     
+    const formData = new FormData();
+    formData.append('action', 'obtenerPuntosCliente');
+    formData.append('telefono', telefono);
+    
     try {
-        const folder = DriveApp.getFolderById(folderId);
-        const name = ss.getName();
-        const copyName = name + ' - Backup - ' + Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+        const response = await fetch(GOOGLE_SHEETS_API, { method: 'POST', body: formData });
+        const data = await response.json();
         
-        // Copia el archivo y lo mueve a la carpeta de backup.
-        DriveApp.getFileById(ss.getId()).makeCopy(copyName, folder);
+        if (data.success) {
+            const puntos = data.puntos || 0;
+            const valorPunto = data.valorPunto || 20; 
+            puntosMaximos = puntos;
+            
+            puntosDisplay.innerHTML = `🌟 **Tienes ${puntos.toLocaleString('es-CO')} Puntos Wimpy**`;
+            
+            if (puntos > 0) {
+                canjeDiv.classList.remove('oculto');
+                document.getElementById('puntosACanjear').max = puntos;
+                document.getElementById('puntosACanjear').min = 0;
+                // Actualizar el texto del label con el valor de $20 COP
+                document.querySelector('#canjePuntosDiv label').innerHTML = `Puntos a Canjear (1 punto = **\$${valorPunto.toLocaleString('es-CO')} COP** de descuento):`;
+            } else {
+                canjeDiv.classList.add('oculto');
+            }
+
+        } else if (data.code === 'PROGRAM_INACTIVE_001') {
+             puntosDisplay.innerHTML = '🚨 Programa de Puntos **inactivo**. Contacte al administrador.';
+             canjeDiv.classList.add('oculto');
+             puntosMaximos = 0;
+        } else if (data.code === 'AUTH_CLIENT_001') {
+             puntosDisplay.innerHTML = 'Cliente no registrado. No aplica para Puntos Wimpy.';
+             canjeDiv.classList.add('oculto');
+             puntosMaximos = 0;
+        } else {
+            puntosDisplay.innerHTML = 'Error al consultar puntos.';
+            canjeDiv.classList.add('oculto');
+            puntosMaximos = 0;
+        }
         
-        Logger.log('Backup diario creado con éxito: ' + copyName);
-    } catch (e) {
-        Logger.log('ERROR al realizar el backup: ' + e.toString());
+    } catch (error) {
+        puntosDisplay.innerHTML = 'Error de conexión.';
     }
 }
 
+// ------------------------------------------------------------------
+// --- GESTIÓN DE PEDIDOS (Públicas) ---
+// ------------------------------------------------------------------
 
-// ----------------------------------------------------
-// 🔐 ENDPOINT SEGURO DE ADMINISTRACIÓN (doPost)
-// ----------------------------------------------------
-
-function doPost(e) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  setupSheets(ss);
-
-  const action = e.parameter.action;
-  const pin = e.parameter.pin;
-
-  // 1. Acciones de cliente (no requieren PIN)
-  if (action === 'registrarPedido') { return registrarPedido(e, ss); }
-  if (action === 'obtenerPuntosCliente') { return gestionPuntos(e, ss); }
-  // ... (otras acciones de cliente y configuración se mantienen) ...
-
-  // 2. Validación de PIN
-  if (!validarAdminPin(pin, ss)) { return json({ success: false, error: 'Acceso denegado: PIN de administrador incorrecto.', code: 'AUTH_001' }); }
-
-  try {
-    switch (action) {
-      case 'guardarConfiguracion':
-        return guardarConfiguracion(e, ss);
-      // ... (CRUD completo de Clientes y Productos se incluye aquí) ...
-      default:
-        return json({ success: false, error: 'Acción POST no reconocida.', code: 'ACTION_404' });
-    }
-  } catch (error) {
-    return json({ success: false, error: 'Error del servidor: ' + error.toString(), code: 'SERVER_500' });
-  }
+async function cargarPoliticaUrl() {
+     const formData = new FormData();
+     formData.append('action', 'obtenerPoliticaUrl');
+     try {
+         const response = await fetch(GOOGLE_SHEETS_API, { method: 'POST', body: formData });
+         const data = await response.json();
+         if (data.success && data.url) {
+             document.getElementById('politicaLink').href = data.url;
+         }
+     } catch (error) {
+         console.error('Error al cargar la URL de la política:', error);
+     }
 }
+
+async function registrarPedido() {
+    const telefono = document.getElementById("telefonoCliente").value.trim();
+    const nombre = document.getElementById("nombreCliente").value.trim();
+    const detalle = document.getElementById("detallePedido").value.trim();
+    const total = document.getElementById("totalPedido").value.trim();
+    const autorizaDatos = document.getElementById("autorizaDatos").checked;
+    let puntosCanjeados = parseInt(document.getElementById("puntosACanjear").value.trim() || 0);
+
+    if (!autorizaDatos) {
+        mostrarMensaje('pedidoMessage', 'Debe autorizar el tratamiento de datos para registrar el pedido.', 'error');
+        return;
+    }
+    if (!nombre || !telefono || !detalle || !total || total <= 0) {
+        mostrarMensaje('pedidoMessage', 'Por favor, complete todos los campos y asegúrese de que el total sea mayor a cero.', 'error');
+        return;
+    }
+    
+    // 1. Validar Puntos en Frontend
+    if (puntosCanjeados > puntosMaximos) {
+        mostrarMensaje('pedidoMessage', `No puedes canjear ${puntosCanjeados} puntos. Solo tienes ${puntosMaximos}.`, 'error');
+        return;
+    }
+    
+    // 2. Simular el descuento en Frontend para la confirmación
+    const valorPunto = 20; // Asumir valor constante, el backend lo valida
+    const descuento = puntosCanjeados * valorPunto; 
+    const totalFinal = parseFloat(total) - descuento;
+    
+    if (totalFinal < 0) {
+        mostrarMensaje('pedidoMessage', 'El descuento por puntos no puede ser mayor al total del pedido.', 'error');
+        return;
+    }
+    
+    // Confirmación al cliente
+    if (puntosCanjeados > 0) {
+        if (!confirm(`Confirmar pedido:\nTotal Bruto: $${parseFloat(total).toLocaleString('es-CO')}\nDescuento por Puntos: $${descuento.toLocaleString('es-CO')}\nTotal Final: $${totalFinal.toLocaleString('es-CO')}\n¿Confirmar canje y pedido?`)) {
+            return;
+        }
+    } else {
+         if (!confirm(`Confirmar pedido:\nTotal: $${parseFloat(total).toLocaleString('es-CO')}\n¿Desea enviar el pedido?`)) {
+            return;
+        }
+    }
+    
+    // Guardar consentimiento
+    localStorage.setItem(STORAGE_CONSENT, 'true');
+
+    const formData = new FormData();
+    formData.append('action', 'registrarPedido');
+    formData.append('nombre', nombre);
+    formData.append('telefono', telefono);
+    formData.append('detalle', detalle);
+    formData.append('total', total); 
+    formData.append('puntosCanjeados', puntosCanjeados); 
+    
+    try {
+        const response = await fetch(GOOGLE_SHEETS_API, { method: 'POST', body: formData });
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarMensaje('pedidoMessage', `✅ Pedido registrado. Total final: $${totalFinal.toLocaleString('es-CO')}. ${data.message}`, 'success');
+            document.getElementById("detallePedido").value = '';
+            document.getElementById("totalPedido").value = '0';
+            document.getElementById("puntosACanjear").value = '0';
+            buscarPuntosCliente(); // Actualiza el saldo de puntos en pantalla
+        } else {
+            let errorMsg = "Error: " + data.error;
+            if (data.code === 'AUTH_CLIENT_001') {
+                errorMsg = 'Error: Cliente no registrado. Pida al administrador que lo añada.';
+            } else if (data.code === 'AUTH_DATOS_002') {
+                errorMsg = 'Error: Pendiente autorizar tratamiento de datos.';
+            } else if (data.code === 'PUNTOS_001') {
+                errorMsg = data.error;
+            }
+            mostrarMensaje('pedidoMessage', errorMsg, 'error');
+        }
+    } catch (error) {
+        mostrarMensaje('pedidoMessage', 'Error de conexión con la API.', 'error');
+        console.error('Error:', error);
+    }
+}
+
+// ------------------------------------------------------------------
+// --- GESTIÓN DE ADMINISTRACIÓN Y CONFIGURACIÓN ---
+// ------------------------------------------------------------------
+
+async function cargarConfiguracion() {
+    const data = await llamarAPIAdmin('obtenerConfiguracion');
+    if (data.success) {
+        document.getElementById('numeroWimpy').value = data.config.numero_wimpy || '';
+        document.getElementById('nombreWimpy').value = data.config.WIMPY_NOMBRE || '';
+        document.getElementById('menuDisponible').checked = data.config.MENU_DISPONIBLE === 'Sí' || data.config.MENU_DISPONIBLE === 'TRUE';
+
+        // Cargar el estado del programa de puntos
+        const activo = data.config.PROGRAMA_PUNTOS_ACTIVO === 'Sí' || data.config.PROGRAMA_PUNTOS_ACTIVO === 'TRUE';
+        document.getElementById('programaPuntosActivo').checked = activo;
+    }
+}
+
+async function guardarConfiguracion() {
+    if (!adminAcceso) return alert("Acceso restringido");
+
+    const numero = document.getElementById('numeroWimpy').value.trim();
+    const nombre = document.getElementById('nombreWimpy').value.trim();
+    const menuDisponible = document.getElementById('menuDisponible').checked;
+    const programaPuntosActivo = document.getElementById('programaPuntosActivo').checked;
+    
+    const data = await llamarAPIAdmin('guardarConfiguracion', { 
+        numero_wimpy: numero,
+        WIMPY_NOMBRE: nombre,
+        MENU_DISPONIBLE: menuDisponible,
+        PROGRAMA_PUNTOS_ACTIVO: programaPuntosActivo 
+    });
+    
+    if (data.success) {
+        mostrarMensaje('configMessage', data.message, 'success');
+    } else {
+        mostrarMensaje('configMessage', data.error, 'error');
+    }
+}
+
+// ------------------------------------------------------------------
+// --- CLIENTES CRUD ---
+// ------------------------------------------------------------------
+
+async function cargarClientes() {
+    const data = await llamarAPIAdmin('obtenerClientes');
+    const tablaClientesDiv = document.getElementById('tablaClientes');
+    if (data.success && data.clientes) {
+        let html = '<table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Puntos</th><th>Autoriza Mensajes</th><th>Acciones</th></tr></thead><tbody>';
+        data.clientes.forEach(c => {
+            html += `<tr>
+                <td>${c.nombre}</td>
+                <td>${c.telefono}</td>
+                <td>${c.puntos.toLocaleString('es-CO')}</td>
+                <td>${c.autorizaMensajes ? '✅ Sí' : '❌ No'}</td>
+                <td>
+                    <button class="btn btn-secondary" onclick="abrirEdicionCliente('${c.nombre}', '${c.telefono}', ${c.autorizaMensajes}, ${c.autorizaDatos})">Editar</button>
+                    <button class="btn btn-danger" onclick="eliminarCliente('${c.telefono}')">Eliminar</button>
+                </td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+        tablaClientesDiv.innerHTML = html;
+    } else {
+        tablaClientesDiv.innerHTML = 'No se pudieron cargar los clientes.';
+    }
+}
+
+async function agregarCliente() {
+    const nombre = document.getElementById('nuevoClienteNombre').value.trim();
+    const telefono = document.getElementById('nuevoClienteTelefono').value.trim();
+    const autorizaMensajes = document.getElementById('nuevoClienteAutorizaMensajes').checked;
+    const autorizaDatos = document.getElementById('nuevoClienteAutorizaDatos').checked;
+
+    const data = await llamarAPIAdmin('agregarCliente', { 
+        nombre, 
+        telefono, 
+        autorizaMensajes, 
+        autorizaDatos 
+    });
+    
+    if (data.success) {
+        mostrarMensaje('clientesMessage', 'Cliente agregado con éxito.', 'success');
+        cerrarModal('agregarClienteModal');
+        document.getElementById('nuevoClienteNombre').value = '';
+        document.getElementById('nuevoClienteTelefono').value = '';
+        cargarClientes();
+    } else {
+        mostrarMensaje('clientesMessage', 'Error: ' + data.error, 'error');
+    }
+}
+
+function abrirEdicionCliente(nombre, telefono, autorizaMensajes, autorizaDatos) {
+    document.getElementById('editClienteNombre').value = nombre;
+    document.getElementById('editClienteTelefono').value = telefono;
+    document.getElementById('editClienteTelefonoOriginal').value = telefono; // Guardar original para búsqueda
+    document.getElementById('editClienteAutorizaMensajes').checked = autorizaMensajes;
+    document.getElementById('editClienteAutorizaDatos').checked = autorizaDatos;
+    mostrarModal('editarClienteModal');
+}
+
+async function guardarEdicionCliente() {
+    const nombre = document.getElementById('editClienteNombre').value.trim();
+    const telefono = document.getElementById('editClienteTelefono').value.trim();
+    const telefonoOriginal = document.getElementById('editClienteTelefonoOriginal').value.trim();
+    const autorizaMensajes = document.getElementById('editClienteAutorizaMensajes').checked;
+    const autorizaDatos = document.getElementById('editClienteAutorizaDatos').checked;
+
+    const data = await llamarAPIAdmin('editarCliente', { 
+        nombre, 
+        telefono, 
+        telefonoOriginal, 
+        autorizaMensajes, 
+        autorizaDatos 
+    });
+    
+    if (data.success) {
+        mostrarMensaje('clientesMessage', 'Cliente editado con éxito.', 'success');
+        cerrarModal('editarClienteModal');
+        cargarClientes();
+    } else {
+        mostrarMensaje('clientesMessage', 'Error: ' + data.error, 'error');
+    }
+}
+
+async function eliminarCliente(telefono) {
+    if (!confirm('¿Está seguro de eliminar este cliente? Se perderá el registro de puntos.')) return;
+    const data = await llamarAPIAdmin('eliminarCliente', { telefono });
+    
+    if (data.success) {
+        mostrarMensaje('clientesMessage', 'Cliente eliminado con éxito.', 'success');
+        cargarClientes();
+    } else {
+        mostrarMensaje('clientesMessage', 'Error: ' + data.error, 'error');
+    }
+}
+
+// ------------------------------------------------------------------
+// --- PRODUCTOS CRUD / TOP 5 ---
+// ------------------------------------------------------------------
+
+async function cargarProductos() {
+    const data = await llamarAPIAdmin('obtenerProductos');
+    const tablaProductosDiv = document.getElementById('tablaProductos');
+    const topProductosDiv = document.getElementById('topProductosList');
+
+    if (data.success) {
+        // Cargar Top 5
+        if (data.topProductos && data.topProductos.length > 0) {
+            let topHtml = '<ul>';
+            data.topProductos.forEach(p => {
+                topHtml += `<li>**${p.nombre}**: ${p.cantidad} unidades vendidas.</li>`;
+            });
+            topHtml += '</ul>';
+            topProductosDiv.innerHTML = topHtml;
+        } else {
+            topProductosDiv.innerHTML = 'Aún no hay suficientes datos en el historial para calcular el Top 5.';
+        }
+
+        // Cargar Lista Completa
+        let html = '<table><thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Activo</th><th>Acciones</th></tr></thead><tbody>';
+        data.productos.forEach(p => {
+            html += `<tr>
+                <td>${p.id}</td>
+                <td>${p.nombre}</td>
+                <td>$${p.precio.toLocaleString('es-CO')}</td>
+                <td>${p.activo ? '✅ Sí' : '❌ No'}</td>
+                <td>
+                    <button class="btn btn-secondary" onclick="abrirEdicionProducto(${p.id}, '${p.nombre}', ${p.precio}, ${p.activo})">Editar</button>
+                    <button class="btn btn-danger" onclick="eliminarProducto(${p.id})">Eliminar</button>
+                </td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+        tablaProductosDiv.innerHTML = html;
+    } else {
+        tablaProductosDiv.innerHTML = 'No se pudieron cargar los productos.';
+        topProductosDiv.innerHTML = 'Error al cargar métricas.';
+    }
+}
+
+async function agregarProducto() {
+    const nombre = document.getElementById('nuevoProductoNombre').value.trim();
+    const precio = document.getElementById('nuevoProductoPrecio').value.trim();
+    const activo = document.getElementById('nuevoProductoActivo').checked;
+
+    const data = await llamarAPIAdmin('agregarProducto', { 
+        nombre, 
+        precio, 
+        activo 
+    });
+    
+    if (data.success) {
+        mostrarMensaje('productosMessage', 'Producto agregado con éxito.', 'success');
+        cerrarModal('agregarProductoModal');
+        document.getElementById('nuevoProductoNombre').value = '';
+        document.getElementById('nuevoProductoPrecio').value = '';
+        cargarProductos();
+    } else {
+        mostrarMensaje('productosMessage', 'Error: ' + data.error, 'error');
+    }
+}
+
+function abrirEdicionProducto(id, nombre, precio, activo) {
+    document.getElementById('editProductoID').value = id;
+    document.getElementById('editProductoNombre').value = nombre;
+    document.getElementById('editProductoPrecio').value = precio;
+    document.getElementById('editProductoActivo').checked = activo;
+    mostrarModal('editarProductoModal');
+}
+
+async function guardarEdicionProducto() {
+    const id = document.getElementById('editProductoID').value;
+    const nombre = document.getElementById('editProductoNombre').value.trim();
+    const precio = document.getElementById('editProductoPrecio').value.trim();
+    const activo = document.getElementById('editProductoActivo').checked;
+
+    const data = await llamarAPIAdmin('editarProducto', { 
+        id, 
+        nombre, 
+        precio, 
+        activo 
+    });
+    
+    if (data.success) {
+        mostrarMensaje('productosMessage', 'Producto editado con éxito.', 'success');
+        cerrarModal('editarProductoModal');
+        cargarProductos();
+    } else {
+        mostrarMensaje('productosMessage', 'Error: ' + data.error, 'error');
+    }
+}
+
+async function eliminarProducto(id) {
+    if (!confirm('¿Está seguro de eliminar este producto?')) return;
+    const data = await llamarAPIAdmin('eliminarProducto', { id });
+    
+    if (data.success) {
+        mostrarMensaje('productosMessage', 'Producto eliminado con éxito.', 'success');
+        cargarProductos();
+    } else {
+        mostrarMensaje('productosMessage', 'Error: ' + data.error, 'error');
+    }
+}
+
+// ------------------------------------------------------------------
+// --- HISTORIAL ---
+// ------------------------------------------------------------------
+
+async function cargarHistorial() {
+    const data = await llamarAPIAdmin('obtenerHistorial');
+    const tablaHistorialDiv = document.getElementById('tablaHistorial');
+    if (data.success && data.historial) {
+        let html = '<table><thead><tr><th>Fecha</th><th>Nombre</th><th>Teléfono</th><th>Total (COP)</th><th>Estado</th><th>Detalle</th><th>Puntos/Descuento</th></tr></thead><tbody>';
+        data.historial.forEach(h => {
+            // Formateo simple de fecha
+            const fecha = h.fecha ? new Date(h.fecha).toLocaleString('es-CO') : 'N/A';
+            const observaciones = h.observaciones || '';
+            const total = h.total ? parseFloat(h.total).toLocaleString('es-CO') : 'N/A';
+            
+            // Extracción de Puntos/Descuento desde Observaciones
+            const puntosMatch = observaciones.match(/Descuento: \$([0-9,]+)/);
+            const descuentoInfo = puntosMatch ? `Descuento: $${puntosMatch[1]}` : 'N/A';
+
+            html += `<tr>
+                <td>${fecha}</td>
+                <td>${h.nombre}</td>
+                <td>${h.telefono}</td>
+                <td>$${total}</td>
+                <td>${h.estado}</td>
+                <td>${h.detalle}</td>
+                <td>${descuentoInfo}</td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+        tablaHistorialDiv.innerHTML = html;
+    } else {
+        tablaHistorialDiv.innerHTML = 'No se pudieron cargar el historial.';
+    }
+}
+
+// ------------------------------------------------------------------
+// --- MENSAJERÍA ---
+// ------------------------------------------------------------------
+
+async function generarContactosPromocionales() {
+    const data = await llamarAPIAdmin('obtenerClientes');
+    const listaDiv = document.getElementById('listaContactosGenerada');
+    
+    if (data.success && data.clientes) {
+        const contactos = data.clientes
+            .filter(c => c.autorizaMensajes)
+            .map(c => `57${c.telefono} // ${c.nombre}`)
+            .join('\n'); 
+            
+        listaDiv.textContent = contactos || 'No hay clientes que hayan autorizado recibir promociones.';
+        
+        if (contactos) {
+            mostrarMensaje('mensajeriaMessage', `Se generó una lista de ${data.clientes.filter(c => c.autorizaMensajes).length} contactos autorizados. Cópiela para su uso en WhatsApp.`, 'success');
+        } else {
+             mostrarMensaje('mensajeriaMessage', `No hay clientes que hayan autorizado recibir promociones.`, 'error');
+        }
+    } else {
+        listaDiv.textContent = 'Error al cargar los contactos.';
+    }
+}
+</script>
+</body>
+</html>

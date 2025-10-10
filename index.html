@@ -1,630 +1,720 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>🍔☕ WimpyApp</title>
-<style>
-  :root{--bg:#0b0c10;--card:#0f1114;--muted:#9aa0a6;--accent:#ff6b35;--text:#e6eef3;}
-  *{box-sizing:border-box;font-family:Inter,system-ui,Arial;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
-  header{display:flex;align-items:center;gap:12px;padding:14px;background:linear-gradient(90deg,#081018,#0d1114)}
-  .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(180deg,#ff8a4c,#ff6b35);display:flex;align-items:center;justify-content:center;font-size:1.1rem}
-  .container{max-width:980px;margin:18px auto;padding:12px}
-  .panel{background:var(--card);border:1px solid #151618;padding:16px;border-radius:12px}
-  .row{display:flex;gap:12px;align-items:center}
-  .col{display:flex;flex-direction:column;gap:8px}
-  button{background:linear-gradient(90deg,var(--accent),#ff9a57);color:white;border:0;padding:10px 12px;border-radius:10px;cursor:pointer}
-  .btn-ghost{background:transparent;border:1px solid #222;color:var(--text);padding:8px;border-radius:8px}
-  input,select,textarea{background:#0c0d0f;color:var(--text);border:1px solid #1b1c1e;padding:10px;border-radius:8px}
-  .muted{color:var(--muted);font-size:0.92rem}
-  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-  .tab{background:#0b0c0e;padding:8px 10px;border-radius:8px;border:1px solid #151617;cursor:pointer}
-  .tab.active{box-shadow:0 6px 18px rgba(0,0,0,.6);border-color:rgba(255,255,255,.04)}
-  .grid{display:grid;gap:12px}
-  .grid.cols-3{grid-template-columns:repeat(3,1fr)}
-  .card{background:#0b0c0e;border:1px solid #151617;padding:10px;border-radius:10px}
-  .small{padding:6px 8px;font-size:0.9rem}
-  footer{margin-top:18px;text-align:center;color:var(--muted);font-size:0.9rem}
-  .hidden{display:none}
-  @media (max-width:800px){ .grid.cols-3{grid-template-columns:repeat(1,1fr)} .row{flex-direction:column;align-items:stretch} }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🍔☕ WimpyApp</title>
+
+  <!-- React + ReactDOM + Babel -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Tailwind CDN (modo oscuro forzado) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Forzar modo oscuro
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {} }
+    }
+  </script>
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍔</text></svg>">
+
+  <style>
+    /* Forzar siempre tema oscuro */
+    :root { color-scheme: dark; }
+    html,body,#root { height: 100%; }
+  </style>
 </head>
-<body>
-  <header>
-    <div class="logo">🍔☕</div>
-    <div>
-      <h2 style="margin:0">WimpyApp</h2>
-      <div class="muted">Pedidos • Fidelización • Facturación</div>
-    </div>
-  </header>
+<body class="dark bg-gray-900 text-gray-100 antialiased">
+  <div id="root"></div>
 
-  <main class="container">
-    <div class="panel">
-      <div class="tabs" id="mainTabs">
-        <div class="tab active" data-view="inicio">Inicio</div>
-        <div class="tab" data-view="cliente">Cliente</div>
-        <div class="tab" data-view="admin">Administrador</div>
-      </div>
+  <script type="text/babel">
 
-      <div id="viewContainer">
-        <!-- INICIO -->
-        <div id="inicioView">
-          <h3>Bienvenido a WimpyApp</h3>
-          <p class="muted">Selecciona Cliente o Administrador para comenzar.</p>
-        </div>
+/* ===========================================================
+   WimpyApp - Frontend v4.5 (React, un solo archivo)
+   Conexión: Apps Script URL (tu endpoint)
+   =========================================================== */
 
-        <!-- CLIENTE -->
-        <div id="clienteView" class="hidden">
-          <div class="grid" style="gap:12px">
-            <div class="card">
-              <h4>Acceso Cliente</h4>
-              <div class="row" style="gap:8px;margin-top:8px">
-                <input id="cliTelefono" placeholder="Teléfono (ej: 3118336562)" />
-                <button id="btnGenerarOtp">Generar PIN (gratis)</button>
-              </div>
+const { useState, useEffect, useMemo } = React;
 
-              <div id="otpArea" class="hidden" style="margin-top:10px">
-                <div class="muted">PIN generado (válido 3 minutos):</div>
-                <div style="font-size:1.6rem;font-weight:700" id="otpValor"></div>
-
-                <div style="margin-top:8px;display:flex;gap:8px">
-                  <input id="pinInput" placeholder="Ingresa el PIN" style="width:160px" />
-                  <button id="btnIngresarConOtp">Ingresar con PIN</button>
-                  <button id="btnWaVerify" class="btn-ghost">Enviar PIN por mi WhatsApp (opcional)</button>
-                </div>
-
-                <div class="muted" style="margin-top:8px">Si pulsas "Enviar PIN por mi WhatsApp" se abrirá tu WhatsApp con un mensaje prellenado que tú enviarás —esto prueba que el número es tuyo.</div>
-              </div>
-            </div>
-
-            <div id="clienteMenu" class="card hidden">
-              <h4>Cliente: <span id="clienteNombreShow"></span></h4>
-              <div class="row" style="justify-content:space-between;align-items:center">
-                <div class="muted">Puntos disponibles: <strong id="clientePuntos">0</strong></div>
-                <div>
-                  <button id="btnCerrarSesion" class="btn-ghost small">Cerrar sesión</button>
-                </div>
-              </div>
-
-              <div style="margin-top:12px">
-                <div style="display:flex;gap:8px">
-                  <button id="clientePedidosBtn" class="small">Pedidos</button>
-                  <button id="clienteConfirmBtn" class="small">Confirmar entrega</button>
-                </div>
-
-                <div id="clientePedidosView" class="hidden" style="margin-top:12px">
-                  <div class="row" style="justify-content:space-between;align-items:center">
-                    <h5>Menú</h5>
-                    <div class="row">
-                      <input id="searchProductosCliente" placeholder="Buscar..." />
-                      <button id="refreshProducts" class="btn-ghost small">Refrescar</button>
-                    </div>
-                  </div>
-
-                  <div id="productosListCliente" class="grid cols-3" style="margin-top:10px"></div>
-
-                  <div style="margin-top:12px" class="card">
-                    <h5>Carrito</h5>
-                    <div id="carritoListCliente"></div>
-                    <div class="row" style="justify-content:space-between;align-items:center;margin-top:8px">
-                      <div class="muted">Total: <strong id="totalCliente">$0</strong></div>
-                      <div style="display:flex;gap:8px">
-                        <button id="btnAplicarPuntos" class="btn-ghost">Usar mis puntos</button>
-                        <button id="btnEnviarPedido" class="btn">Confirmar compra</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div id="clienteConfirmView" class="hidden" style="margin-top:12px">
-                  <h5>Confirmar entrega</h5>
-                  <div class="muted">Selecciona el pedido que recibiste:</div>
-                  <div id="pedidosPendientesCliente" style="margin-top:8px"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ADMIN -->
-        <div id="adminView" class="hidden">
-          <div class="grid" style="gap:12px">
-            <div class="card">
-              <h4>Acceso Administrador</h4>
-              <div class="row" style="gap:8px;margin-top:8px">
-                <input id="adminPin" placeholder="PIN administrador" />
-                <button id="btnAdminLogin">Ingresar</button>
-              </div>
-              <div class="muted" style="margin-top:8px">PIN por defecto: <strong>1995</strong></div>
-              <div id="adminStatus" class="muted" style="margin-top:6px"></div>
-            </div>
-
-            <div id="adminPanel" class="hidden">
-              <div class="card">
-                <h4>Admin Panel</h4>
-                <div style="display:flex;gap:8px;flex-wrap:wrap">
-                  <button class="tab small" data-adminview="dashboard">Dashboard</button>
-                  <button class="tab small" data-adminview="productos">Productos</button>
-                  <button class="tab small" data-adminview="clientes">Clientes</button>
-                  <button class="tab small" data-adminview="pedidos">Pedidos</button>
-                  <button class="tab small" data-adminview="facturacion">Cuentas de cobro</button>
-                  <button class="tab small" data-adminview="fidelizacion">Fidelización</button>
-                  <button class="tab small" data-adminview="configuracion">Configuración</button>
-                  <button class="tab small" data-adminview="backups">Backups</button>
-                </div>
-
-                <div id="adminViewsArea" style="margin-top:12px">
-                  <!-- Dashboard -->
-                  <div id="admin_dashboard" class="hidden">
-                    <h5>Dashboard</h5>
-                    <div class="row" style="gap:12px;margin-top:8px">
-                      <div class="card">Pedidos totales: <div id="stat_total">0</div></div>
-                      <div class="card">Pendientes: <div id="stat_pend">0</div></div>
-                      <div class="card">Entregados: <div id="stat_ent">0</div></div>
-                      <div class="card">Puntos emitidos: <div id="stat_pts">0</div></div>
-                    </div>
-                  </div>
-
-                  <!-- Productos -->
-                  <div id="admin_productos" class="hidden">
-                    <h5>Productos</h5>
-                    <div style="display:flex;gap:8px;margin-top:8px">
-                      <input id="prodNombre" placeholder="Nombre producto"/>
-                      <input id="prodPrecio" placeholder="Precio entero"/>
-                      <input id="prodCategoria" placeholder="Categoría (ej: Cafetería)"/>
-                      <button id="btnAddProd">Agregar</button>
-                    </div>
-                    <div id="productosAdminList" style="margin-top:10px"></div>
-                  </div>
-
-                  <!-- Clientes -->
-                  <div id="admin_clientes" class="hidden">
-                    <h5>Clientes</h5>
-                    <div style="display:flex;gap:8px;margin-top:8px">
-                      <input id="cliNombreAdmin" placeholder="Nombre"/>
-                      <input id="cliTelefonoAdmin" placeholder="Teléfono"/>
-                      <input id="cliEmailAdmin" placeholder="Email (opcional)"/>
-                      <button id="btnAddClienteAdmin">Agregar</button>
-                    </div>
-                    <div id="clientesAdminList" style="margin-top:10px"></div>
-                  </div>
-
-                  <!-- Pedidos -->
-                  <div id="admin_pedidos" class="hidden">
-                    <h5>Pedidos</h5>
-                    <div style="display:flex;gap:8px;margin-top:8px">
-                      <select id="filtroPedidos">
-                        <option value="todos">Todos</option>
-                        <option value="pendiente">Pendiente</option>
-                        <option value="aprobado">Aprobado</option>
-                        <option value="entregado">Entregado</option>
-                        <option value="cancelado">Cancelado</option>
-                      </select>
-                      <button id="btnRefreshHist">Refrescar</button>
-                    </div>
-                    <div id="pedidosAdminList" style="margin-top:10px"></div>
-                  </div>
-
-                  <!-- Facturación -->
-                  <div id="admin_facturacion" class="hidden">
-                    <h5>Cuentas de cobro</h5>
-                    <div style="display:flex;gap:8px;margin-top:8px">
-                      <input id="factMes" type="month" />
-                      <button id="btnGenPdfMensual">Generar PDF mensual (Total)</button>
-                      <button id="btnGenExcelMensual">Generar Excel detalle por empleado</button>
-                    </div>
-                    <div id="factLinks" style="margin-top:8px"></div>
-                    <div style="margin-top:12px">
-                      <h6>Generar cuenta individual:</h6>
-                      <input id="invoiceTimestamp" placeholder="Timestamp pedido" />
-                      <button id="btnGenInvoice">Generar cuenta (pedido)</button>
-                    </div>
-                  </div>
-
-                  <!-- Fidelización -->
-                  <div id="admin_fidelizacion" class="hidden">
-                    <h5>Fidelización y Promociones</h5>
-                    <div class="muted">Promociones activas</div>
-                    <div style="display:flex;gap:8px;margin-top:8px">
-                      <input id="promoNombre" placeholder="Nombre promo (ej: Viernes de Café)"/>
-                      <input id="promoFiltro" placeholder="Filtro palabra (ej: café)"/>
-                      <input id="promoMult" placeholder="Multiplicador (ej: 2)"/>
-                      <button id="btnAddPromo">Agregar promo</button>
-                    </div>
-                    <div id="promosList" style="margin-top:10px"></div>
-                    <div style="margin-top:12px" class="muted">Bono cumpleaños: aplica automáticamente.</div>
-                  </div>
-
-                  <!-- Configuración -->
-                  <div id="admin_configuracion" class="hidden">
-                    <h5>Configuración Wimpy</h5>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-                      <input id="cfgNumeroWimpy" placeholder="Número WhatsApp Wimpy (ej: 573118336562)"/>
-                      <input id="cfgNombreW" placeholder="Nombre empresa (Wimpy)"/>
-                      <input id="cfgNIT" placeholder="NIT Wimpy"/>
-                      <input id="cfgEmpresaNombre" placeholder="Empresa contratante (nombre)"/>
-                      <input id="cfgEmpresaNIT" placeholder="NIT empresa"/>
-                      <input id="cfgCodigoEmpresa" placeholder="Código empresa (2 dígitos)"/>
-                      <button id="btnGuardarCfg">Guardar</button>
-                      <button id="btnCargarCfg" class="btn-ghost">Cargar actual</button>
-                    </div>
-                  </div>
-
-                  <!-- Backups -->
-                  <div id="admin_backups" class="hidden">
-                    <h5>Backups</h5>
-                    <div style="display:flex;gap:8px;margin-top:8px">
-                      <button id="btnBackupNow">Crear backup ahora</button>
-                      <button id="btnCrearTrigger" class="btn-ghost">Crear trigger diario</button>
-                    </div>
-                    <div id="backupLog" style="margin-top:8px"></div>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </main>
-
-  <footer>WimpyApp • Hecho para administración empresarial</footer>
-
-<script>
-/* ================== CONFIG ================== */
+// ===================== CONFIG =====================
 const GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec';
 const ADMIN_PIN = '1995';
-/* ============================================ */
 
-let productos = [], clientes = [], historial = [], promos = [];
-let clienteSesion = null;
-let carrito = [];
-let puntosAplicados = 0;
-let NUMERO_WIMPY = '573118336562';
+// ===================== HELPERS =====================
+const fetchAPI = async (params = {}) => {
+  // params: { action: 'obtenerProductos', ...}
+  const qs = new URLSearchParams(params).toString();
+  const url = `${GOOGLE_SHEETS_API}?${qs}`;
+  const res = await fetch(url);
+  return res.json();
+};
 
-const $ = s => document.querySelector(s);
-const $$ = s => Array.from(document.querySelectorAll(s));
-const esc = t => String(t||'');
-async function getJSON(q){
-  try{
-    const r = await fetch(q, {cache:'no-store'});
-    return await r.json();
-  } catch(e){ console.error('fetch error',e); return null; }
-}
+const formatMoney = (n) => {
+  return Number(n || 0).toLocaleString('es-CO');
+};
 
-/* ---------- Tabs ---------- */
-$$('.tab[data-view]').forEach(t=>{
-  t.addEventListener('click', ()=>{
-    $$('.tab[data-view]').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active');
-    const view = t.dataset.view;
-    $('#inicioView').classList.toggle('hidden', view!=='inicio');
-    $('#clienteView').classList.toggle('hidden', view!=='cliente');
-    $('#adminView').classList.toggle('hidden', view!=='admin');
-  });
-});
+const nowStr = () => new Date().toLocaleString('es-CO');
 
-/* ---------- CLIENTE: OTP ---------- */
-$('#btnGenerarOtp').addEventListener('click', async ()=>{
-  const tel = $('#cliTelefono').value.trim();
-  if (!tel) return alert('Ingresa teléfono');
-  const res = await getJSON(`${GOOGLE_SHEETS_API}?action=generarOTP&telefono=${encodeURIComponent(tel)}`);
-  if (res && res.success){
-    $('#otpArea').classList.remove('hidden');
-    $('#otpValor').textContent = res.pin;
-    $('#pinInput').value = '';
-    // hide after 3 minutes
-    setTimeout(()=>{ $('#otpArea').classList.add('hidden'); $('#otpValor').textContent=''; }, 180000);
-    $('#btnWaVerify').onclick = ()=>{
-      // open wa.me to NUMERO_WIMPY (from config if available)
-      const numero = window.NUMERO_WIMPY || NUMERO_WIMPY;
-      const text = `WIMPY OTP REQUEST: ${res.pin}`;
-      window.open(`https://wa.me/${numero}?text=${encodeURIComponent(text)}`, '_blank');
-    };
-  } else alert('Error generando PIN');
-});
+// ===================== APP =====================
+function App(){
+  // vistas
+  const [screen, setScreen] = useState('home'); // home, clienteLogin, clienteMenu, clientePedidos, clienteConfirmar, adminLogin, admin
+  const [loading, setLoading] = useState(false);
 
-$('#btnIngresarConOtp').addEventListener('click', async ()=>{
-  const tel = $('#cliTelefono').value.trim();
-  const pin = $('#pinInput').value.trim();
-  if (!tel || !pin) return alert('Teléfono y PIN requeridos');
-  const res = await getJSON(`${GOOGLE_SHEETS_API}?action=validarOTP&telefono=${encodeURIComponent(tel)}&pin=${encodeURIComponent(pin)}`);
-  if (res && res.success){
-    clienteSesion = { telefono: tel, nombre: res.nombre || ('Cliente ' + tel) };
-    $('#clienteNombreShow').textContent = clienteSesion.nombre;
-    $('#clientePuntos').textContent = res.saldo || 0;
-    $('#clienteMenu').classList.remove('hidden');
-    $('#otpArea').classList.add('hidden');
-    $('#pinInput').value = '';
-    showClientePedidos(); // default to pedidos view
-  } else {
-    alert(res && res.message ? res.message : 'PIN inválido o expirado');
-  }
-});
+  // config (desde Sheets)
+  const [config, setConfig] = useState({ numero_wimpy: '573118336562' });
 
-$('#btnCerrarSesion').addEventListener('click', ()=>{
-  clienteSesion = null; carrito = []; $('#clienteMenu').classList.add('hidden');
-});
+  // cliente / auth OTP
+  const [telefono, setTelefono] = useState('');
+  const [pinGenerado, setPinGenerado] = useState('');
+  const [pinInput, setPinInput] = useState('');
+  const [clienteNombre, setClienteNombre] = useState('');
+  const [saldoPuntos, setSaldoPuntos] = useState(0);
 
-/* ---------- CLIENTE: pedidos / carrito ---------- */
-$('#clientePedidosBtn').addEventListener('click', ()=>{ $('#clienteConfirmView').classList.add('hidden'); $('#clientePedidosView').classList.remove('hidden'); renderProductosLista(); });
-$('#clienteConfirmBtn').addEventListener('click', ()=>{ $('#clientePedidosView').classList.add('hidden'); $('#clienteConfirmView').classList.remove('hidden'); cargarPedidosCliente(); });
+  // productos + carrito
+  const [productos, setProductos] = useState([]);
+  const [buscador, setBuscador] = useState('');
+  const [categoriaFilter, setCategoriaFilter] = useState('');
+  const [cart, setCart] = useState([]);
 
-$('#refreshProducts').addEventListener('click', async ()=>{ await loadProductos(); renderProductosLista(); });
+  // admin
+  const [adminPinInput, setAdminPinInput] = useState('');
+  const [adminAuth, setAdminAuth] = useState(false);
+  const [adminView, setAdminView] = useState('dashboard'); // dashboard, productos, clientes, pedidos, cuentas, config
+  const [productosAdmin, setProductosAdmin] = useState([]);
+  const [clientesAdmin, setClientesAdmin] = useState([]);
+  const [pedidosAdmin, setPedidosAdmin] = useState([]);
 
-async function loadProductos(){ const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerProductos`); productos = (r && r.success) ? r.productos : []; }
-async function loadClientes(){ const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerClientes`); clientes = (r && r.success) ? r.clientes : []; }
-async function loadHistorial(){ const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerHistorial`); historial = (r && r.success) ? r.historial : []; }
-async function loadPromos(){ const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerPromos`); promos = (r && r.success) ? r.promos : []; }
+  // mensajes
+  const [toast, setToast] = useState('');
 
-async function renderProductosLista(){
-  await loadProductos();
-  const q = $('#searchProductosCliente').value.trim().toLowerCase();
-  const node = $('#productosListCliente'); node.innerHTML = '';
-  const lista = productos.filter(p => (p.activo === 'SI' || p.activo === true || p.activo === 'TRUE'));
-  const fil = lista.filter(p => !q || (p.nombreProducto||'').toLowerCase().includes(q));
-  if (!fil.length){ node.innerHTML = '<div class="muted">No hay productos</div>'; return; }
-  fil.forEach(p=>{
-    const el = document.createElement('div'); el.className='card';
-    el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-weight:700">${esc(p.nombreProducto)}</div><div class="muted">$ ${Number(p.precio).toLocaleString('es-CO')}</div></div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <input type="number" min="1" value="1" style="width:80px;padding:6px;border-radius:6px;background:#0c0d0f;color:var(--text)" data-id="${p.IDProducto}" />
-        <button data-add="${p.IDProducto}" class="small">Añadir</button>
-      </div>
-    </div>`;
-    node.appendChild(el);
-  });
-  node.querySelectorAll('button[data-add]').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const id = b.dataset.add;
-      const input = b.parentElement.querySelector('input');
-      const qty = parseInt(input.value,10) || 1;
-      const prod = productos.find(x=> String(x.IDProducto)===String(id));
-      if (prod) addToCart(prod, qty);
+  useEffect(() => {
+    // cargar configuración y recursos iniciales
+    cargarConfiguracion();
+    obtenerProductos();
+    if (adminAuth) cargarAdminData();
+  }, [adminAuth]);
+
+  // ===================== CONFIG =====================
+  const cargarConfiguracion = async () => {
+    try{
+      const r = await fetchAPI({ action: 'obtenerConfiguracion' });
+      if (r.success && r.configuracion){
+        setConfig(r.configuracion);
+      } else {
+        console.warn('No config found, using defaults');
+      }
+    }catch(e){ console.error('cfg err', e); }
+  };
+
+  // ===================== PRODUCTOS =====================
+  const obtenerProductos = async () => {
+    try{
+      const r = await fetchAPI({ action: 'obtenerProductos' });
+      if (r.success){
+        setProductos(r.productos || []);
+        setProductosAdmin(r.productos || []);
+      }
+    }catch(e){ console.error(e); }
+  };
+
+  const addProductToCart = (p) => {
+    setCart(prev => {
+      const idx = prev.findIndex(x=>x.id===p.id);
+      if (idx >= 0){
+        const copy = [...prev]; copy[idx].cantidad += 1; return copy;
+      }
+      return [...prev, { ...p, cantidad: 1 }];
     });
-  });
-}
+    toastMsg('Agregado al carrito');
+  };
 
-function addToCart(prod, qty){
-  const found = carrito.find(i=> String(i.id)===String(prod.IDProducto));
-  if (found) found.cantidad += qty;
-  else carrito.push({ id:prod.IDProducto, nombre:prod.nombreProducto, precio:parseInt(prod.precio,10)||0, cantidad:qty });
-  renderCarrito();
-}
-
-function renderCarrito(){
-  const node = $('#carritoListCliente'); node.innerHTML = '';
-  if (!carrito.length){ node.innerHTML = '<div class="muted">Carrito vacío</div>'; $('#totalCliente').textContent='$0'; return; }
-  let total = 0;
-  carrito.forEach((it, idx)=>{
-    total += it.precio * it.cantidad;
-    const el = document.createElement('div'); el.style.display='flex'; el.style.justifyContent='space-between'; el.style.marginBottom='8px';
-    el.innerHTML = `<div>${esc(it.nombre)} <span class="muted">x${it.cantidad}</span></div><div>$${Number(it.precio*it.cantidad).toLocaleString('es-CO')}</div>`;
-    node.appendChild(el);
-  });
-  $('#totalCliente').textContent = `$${Number(total).toLocaleString('es-CO')}`;
-}
-
-$('#btnAplicarPuntos').addEventListener('click', async ()=>{
-  if (!clienteSesion) return alert('Ingresa primero con tu PIN');
-  const res = await getJSON(`${GOOGLE_SHEETS_API}?action=getSaldoPuntos&telefono=${encodeURIComponent(clienteSesion.telefono)}`);
-  if (res && res.success){
-    const saldo = parseInt(res.saldo || 0,10);
-    if (!saldo) return alert('No tienes puntos disponibles');
-    const use = parseInt(prompt(`Tienes ${saldo} puntos. ¿Cuántos quieres usar? (solo enteros)`,'0'),10);
-    if (!use || use<=0) return;
-    if (use>saldo) return alert('No tienes tantos puntos');
-    puntosAplicados = use;
-    alert(`Se aplicarán ${use} puntos al siguiente pago`);
-  } else alert('Error obteniendo saldo');
-});
-
-$('#btnEnviarPedido').addEventListener('click', async ()=>{
-  if (!clienteSesion) return alert('Ingresa primero');
-  if (!carrito.length) return alert('Carrito vacío');
-  const detalle = carrito.map(i=> ({ id:i.id, nombre:i.nombre, precio:i.precio, cantidad:i.cantidad }));
-  const total = carrito.reduce((s,i)=> s + (i.precio*i.cantidad), 0);
-  const payload = `${GOOGLE_SHEETS_API}?action=registrarPedido&telefono=${encodeURIComponent(clienteSesion.telefono)}&nombre=${encodeURIComponent(clienteSesion.nombre||'')}&detalleJSON=${encodeURIComponent(JSON.stringify(detalle))}&total=${encodeURIComponent(total)}&puntosAplicados=${encodeURIComponent(puntosAplicados||0)}`;
-  const res = await getJSON(payload);
-  if (res && res.success){
-    alert('Pedido registrado. Se enviará notificación a Wimpy. Quedó como PENDIENTE.');
-    carrito = []; puntosAplicados = 0;
-    renderCarrito();
-    await loadHistorial();
-  } else alert('Error registrando pedido');
-});
-
-/* ---------- CLIENTE: Confirmar entrega ---------- */
-async function cargarPedidosCliente(){
-  await loadHistorial();
-  const node = $('#pedidosPendientesCliente'); node.innerHTML = '';
-  const tel = clienteSesion ? clienteSesion.telefono : $('#cliTelefono').value.trim();
-  const lista = historial.filter(h => (h.telefono||'').indexOf(tel)!==-1 && (h.estado==='aprobado' || h.estado==='pendiente'));
-  if (!lista.length){ node.innerHTML = '<div class="muted">No hay pedidos</div>'; return; }
-  lista.forEach(h=>{
-    const el = document.createElement('div'); el.className='card';
-    el.innerHTML = `<div style="display:flex;justify-content:space-between">
-      <div><div style="font-weight:700">${esc(h.detalleResumen || h.detalle)}</div><div class="muted">${esc(h.fecha)} • ${esc(h.hora)}</div></div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <div class="muted">Total: $${Number(h.total).toLocaleString('es-CO')}</div>
-        ${h.estado!=='entregado' ? `<button data-confirm="${h.timestamp}" class="small">Confirmar entrega</button>` : `<div class="muted">Estado: ${h.estado}</div>`}
-      </div>
-    </div>`;
-    node.appendChild(el);
-  });
-  node.querySelectorAll('button[data-confirm]').forEach(b=>{
-    b.addEventListener('click', async ()=>{
-      const ts = b.dataset.confirm;
-      if (!confirm('Confirmar que recibiste el pedido?')) return;
-      const res = await getJSON(`${GOOGLE_SHEETS_API}?action=confirmarEntrega&timestamp=${encodeURIComponent(ts)}&telefono=${encodeURIComponent(clienteSesion.telefono)}`);
-      if (res && res.success){
-        alert('Entrega confirmada. Gracias.');
-        await loadHistorial(); cargarPedidosCliente();
-        const saldo = await getJSON(`${GOOGLE_SHEETS_API}?action=getSaldoPuntos&telefono=${encodeURIComponent(clienteSesion.telefono)}`);
-        $('#clientePuntos').textContent = saldo.saldo || 0;
-      } else alert('Error confirmando entrega');
+  const changeQty = (id, delta) => {
+    setCart(prev => {
+      const copy = prev.map(x => ({...x}));
+      const idx = copy.findIndex(x=>x.id===id);
+      if (idx>=0){
+        copy[idx].cantidad = Math.max(0, copy[idx].cantidad + delta);
+        if (copy[idx].cantidad === 0) copy.splice(idx,1);
+      }
+      return copy;
     });
-  });
-}
+  };
 
-/* ---------- ADMIN ---------- */
-$('#btnAdminLogin').addEventListener('click', async ()=>{
-  const pin = $('#adminPin').value.trim();
-  if (pin === ADMIN_PIN){
-    $('#adminPin').value = '';
-    $('#adminStatus').textContent = 'Sesión activa como administrador ✅';
-    $('#adminPanel').classList.remove('hidden');
-    $('#admin_dashboard').classList.remove('hidden');
-    await loadAllAdmin();
-  } else alert('PIN incorrecto');
-});
+  const removeFromCart = (id) => {
+    setCart(prev => prev.filter(x=>x.id!==id));
+  };
 
-async function loadAllAdmin(){ await loadProductos(); await loadClientes(); await loadHistorial(); await loadPromos(); renderAdminProductos(); renderAdminClientes(); renderAdminPedidos(); renderPromos(); renderStats(); }
+  const totalCart = useMemo(() => {
+    return cart.reduce((s,i)=> s + (Number(i.precio||0) * Number(i.cantidad||1)), 0);
+  }, [cart]);
 
-$$('.tab.small[data-adminview]').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    const v = b.dataset.adminview;
-    ['dashboard','productos','clientes','pedidos','facturacion','fidelizacion','configuracion','backups'].forEach(x=> $('#admin_'+x).classList.add('hidden'));
-    $('#admin_'+v).classList.remove('hidden');
-    if (v==='productos') renderAdminProductos();
-    if (v==='clientes') renderAdminClientes();
-    if (v==='pedidos') renderAdminPedidos();
-    if (v==='fidelizacion') renderPromos();
-    if (v==='configuracion') loadConfig();
-    if (v==='dashboard') renderStats();
-  });
-});
+  // ===================== CLIENTE - OTP =====================
+  const generarPin = async () => {
+    if (!telefono) return toastMsg('Ingresa un número');
+    setLoading(true);
+    try{
+      const r = await fetchAPI({ action: 'generarOTP', telefono });
+      if (r.success){
+        setPinGenerado(r.pin);
+        setToast(`PIN generado: ${r.pin} (válido 3 min). Ingrésalo abajo.`);
+      } else {
+        toastMsg('No se pudo generar PIN');
+      }
+    }catch(e){
+      console.error(e); toastMsg('Error generando PIN');
+    }
+    setLoading(false);
+  };
 
-/* Productos admin */
-$('#btnAddProd').addEventListener('click', async ()=>{
-  const nombre = $('#prodNombre').value.trim();
-  const precio = parseInt($('#prodPrecio').value.trim(),10);
-  const categoria = $('#prodCategoria').value.trim();
-  if (!nombre || isNaN(precio)) return alert('Nombre y precio (entero)');
-  const res = await getJSON(`${GOOGLE_SHEETS_API}?action=agregarProducto&nombre=${encodeURIComponent(nombre)}&precio=${encodeURIComponent(precio)}&categoria=${encodeURIComponent(categoria)}`);
-  if (res && res.success){ $('#prodNombre').value=''; $('#prodPrecio').value=''; $('#prodCategoria').value=''; await loadProductos(); renderAdminProductos(); } else alert('Error');
-});
-async function renderAdminProductos(){
-  await loadProductos();
-  const node = $('#productosAdminList'); node.innerHTML = '';
-  productos.forEach(p=>{
-    const el = document.createElement('div'); el.className='card';
-    el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-weight:700">${esc(p.nombreProducto)}</div><div class="muted">C: ${esc(p.categoria)} • $${Number(p.precio).toLocaleString('es-CO')}</div></div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <button data-edit="${p.IDProducto}" class="btn-ghost small">Editar</button>
-        <button data-del="${p.IDProducto}" class="btn-ghost small">Eliminar</button>
-      </div>
-    </div>`;
-    node.appendChild(el);
-  });
-  node.querySelectorAll('button[data-del]').forEach(b=> b.addEventListener('click', async ()=>{ if(!confirm('Eliminar producto?')) return; const id=b.dataset.del; const res=await getJSON(`${GOOGLE_SHEETS_API}?action=eliminarProducto&id=${encodeURIComponent(id)}`); if (res && res.success){ await loadProductos(); renderAdminProductos(); } else alert('Error'); }));
-  node.querySelectorAll('button[data-edit]').forEach(b=> b.addEventListener('click', async ()=>{ const id=b.dataset.edit; const p=productos.find(x=>String(x.IDProducto)===String(id)); if(!p) return; const nuevo = prompt('Nuevo precio entero para ' + p.nombreProducto, p.precio); if (nuevo===null) return; const price = parseInt(nuevo,10); if (isNaN(price)) return alert('Precio inválido'); const res = await getJSON(`${GOOGLE_SHEETS_API}?action=editarProducto&id=${encodeURIComponent(id)}&precio=${encodeURIComponent(price)}`); if (res && res.success) await loadProductos(), renderAdminProductos(); else alert('Error'); }));
-}
+  const validarPin = async () => {
+    if (!telefono || !pinInput) return toastMsg('Ingresa teléfono y PIN');
+    setLoading(true);
+    try{
+      const r = await fetchAPI({ action: 'validarOTP', telefono, pin: pinInput });
+      if (r.success){
+        setClienteNombre(r.nombre || '');
+        setSaldoPuntos(r.saldo || 0);
+        setScreen('clienteMenu');
+        setToast('Ingreso aceptado');
+        // limpiar campo pinInput y pinGenerado al ingresar
+        setPinInput('');
+        setPinGenerado('');
+      } else {
+        toastMsg(r.message || 'PIN inválido');
+      }
+    }catch(e){
+      console.error(e); toastMsg('Error validando PIN');
+    }
+    setLoading(false);
+  };
 
-/* Clientes admin */
-$('#btnAddClienteAdmin').addEventListener('click', async ()=>{
-  const nombre = $('#cliNombreAdmin').value.trim();
-  const telefono = $('#cliTelefonoAdmin').value.trim();
-  const email = $('#cliEmailAdmin').value.trim();
-  if (!nombre || !telefono) return alert('Nombre y teléfono');
-  const res = await getJSON(`${GOOGLE_SHEETS_API}?action=agregarCliente&telefono=${encodeURIComponent(telefono)}&nombre=${encodeURIComponent(nombre)}&email=${encodeURIComponent(email)}`);
-  if (res && res.success){ $('#cliNombreAdmin').value=''; $('#cliTelefonoAdmin').value=''; $('#cliEmailAdmin').value=''; await loadClientes(); renderAdminClientes(); } else alert(res.message||'Error');
-});
-async function renderAdminClientes(){
-  await loadClientes();
-  const node = $('#clientesAdminList'); node.innerHTML = '';
-  clientes.forEach(c=>{
-    const el = document.createElement('div'); el.className='card';
-    el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-weight:700">${esc(c.nombre)}</div><div class="muted">${esc(c.telefono)}</div></div>
-      <div><div class="muted">${esc(c.email||'')}</div></div>
-    </div>`;
-    node.appendChild(el);
-  });
-}
+  // ===================== CLIENTE - PEDIDOS =====================
+  const confirmarPedido = async () => {
+    if (!telefono) return toastMsg('Debes ingresar teléfono');
+    if (cart.length === 0) return toastMsg('Carrito vacío');
+    setLoading(true);
+    try{
+      const detalle = JSON.stringify(cart.map(i=>({ id:i.id, nombre:i.nombre, precio:i.precio, cantidad:i.cantidad })));
+      const r = await fetchAPI({ action: 'registrarPedido', telefono, nombre: clienteNombre || '', detalleJSON: detalle, total: totalCart });
+      if (r.success){
+        // Abrir WhatsApp con mensaje al numero de Wimpy
+        const numero = (config.numero_wimpy || config['numero_wimpy'] || '573118336562').replace(/\+/g,'').replace(/\s+/g,'');
+        const msg = encodeURIComponent(`Nuevo pedido desde WimpyApp\nCliente: ${clienteNombre || ''}\nTel: ${telefono}\nPedido: ${r.idpedido}\nTotal: $${formatMoney(totalCart)}`);
+        // limpiar carrito
+        setCart([]);
+        // abrir WA
+        const waUrl = `https://wa.me/${numero}?text=${msg}`;
+        window.open(waUrl, '_blank');
+        toastMsg('Pedido registrado. Se abrió WhatsApp para confirmarlo.');
+      } else {
+        toastMsg('Error registrando pedido');
+      }
+    }catch(e){
+      console.error(e); toastMsg('Error confirmando pedido');
+    }
+    setLoading(false);
+  };
 
-/* Pedidos admin */
-$('#btnRefreshHist').addEventListener('click', renderAdminPedidos);
-async function renderAdminPedidos(){
-  await loadHistorial();
-  const filtro = $('#filtroPedidos').value;
-  const node = $('#pedidosAdminList'); node.innerHTML = '';
-  const lista = historial.filter(h => filtro==='todos' ? true : h.estado===filtro);
-  if (!lista.length){ node.innerHTML = '<div class="muted">Sin pedidos</div>'; return; }
-  lista.slice().reverse().forEach(h=>{
-    const el = document.createElement('div'); el.className='card';
-    el.innerHTML = `<div style="display:flex;justify-content:space-between">
-      <div><div style="font-weight:700">${esc(h.nombre)} • ${esc(h.telefono)}</div><div class="muted">${esc(h.fecha)} • ${esc(h.hora)}</div><div style="margin-top:6px">${esc(h.detalleResumen || h.detalle)}</div></div>
-      <div style="text-align:right">
-        <div class="muted">Total: $${Number(h.total).toLocaleString('es-CO')}</div>
-        <div style="margin-top:8px">
-          ${h.estado!=='aprobado'? `<button data-apr="${h.timestamp}" class="small">Aprobar</button>` : ''}
-          ${h.estado!=='entregado'? `<button data-ent="${h.timestamp}" class="small">Marcar entregado</button>` : ''}
-          <button data-invoice="${h.timestamp}" class="small btn-ghost">Generar cuenta</button>
+  // ===================== CLIENTE - CONFIRMAR ENTREGA =====================
+  const confirmarEntregaCliente = async () => {
+    // Pedir id de pedido al cliente: simple flujo — mostramos listado de pedidos del usuario (historial) y dejamos confirmar.
+    setLoading(true);
+    try{
+      // obtener historial y filtrar por telefono
+      const r = await fetchAPI({ action: 'obtenerHistorial' });
+      if (r.success){
+        const lista = (r.historial || []).filter(h => h.telefono === telefono && h.estado !== 'entregado');
+        if (lista.length === 0){
+          toastMsg('No hay pedidos pendientes para confirmar');
+        } else {
+          // si hay más de uno, pedimos seleccionar; para simplicidad si hay uno lo confirmamos
+          const pedido = lista[0];
+          const resp = await fetchAPI({ action: 'confirmarEntrega', idpedido: pedido.idpedido, telefono });
+          if (resp.success){
+            // abrir whatsapp al numero de wimpy con mensaje de confirmacion
+            const numero = (config.numero_wimpy || config['numero_wimpy'] || '573118336562').replace(/\+/g,'').replace(/\s+/g,'');
+            const msg = encodeURIComponent(`Yo ${pedido.nombre || ''} confirmo que recibí el pedido ${pedido.idpedido}. Gracias Wimpy.`);
+            const waUrl = `https://wa.me/${numero}?text=${msg}`;
+            window.open(waUrl, '_blank');
+            toastMsg('Entrega confirmada. Se abrió WhatsApp.');
+          } else {
+            toastMsg(resp.message || 'No se pudo confirmar entrega');
+          }
+        }
+      } else {
+        toastMsg('No se pudo cargar historial');
+      }
+    }catch(e){
+      console.error(e); toastMsg('Error confirmando entrega');
+    }
+    setLoading(false);
+  };
+
+  // ===================== ADMIN =====================
+  const intentarAdminLogin = () => {
+    if (adminPinInput === ADMIN_PIN){
+      setAdminAuth(true);
+      setAdminPinInput('');
+      setToast('Sesión administrativa iniciada');
+    } else {
+      toastMsg('PIN administrador incorrecto');
+    }
+  };
+
+  const cargarAdminData = async () => {
+    setLoading(true);
+    try{
+      const r1 = await fetchAPI({ action: 'obtenerProductos' });
+      if (r1.success) setProductosAdmin(r1.productos || []);
+      const r2 = await fetchAPI({ action: 'obtenerClientes' });
+      if (r2.success) setClientesAdmin(r2.clientes || []);
+      const r3 = await fetchAPI({ action: 'obtenerHistorial' });
+      if (r3.success) setPedidosAdmin(r3.historial || []);
+    }catch(e){ console.error(e); }
+    setLoading(false);
+  };
+
+  // productos admin CRUD
+  const agregarProductoAdmin = async (nombre, precio, categoria) => {
+    if (!nombre) return toastMsg('Nombre requerido');
+    setLoading(true);
+    try{
+      const r = await fetchAPI({ action: 'agregarProducto', nombre, precio: parseInt(precio||0), categoria });
+      if (r.success){ toastMsg('Producto agregado'); obtenerProductos(); cargarAdminData(); }
+      else toastMsg('Error agregando producto');
+    }catch(e){ console.error(e); toastMsg('Error'); }
+    setLoading(false);
+  };
+  const eliminarProductoAdmin = async (id) => {
+    if (!confirm('Eliminar producto?')) return;
+    setLoading(true);
+    try{ const r = await fetchAPI({ action: 'eliminarProducto', id }); if (r.success){ toastMsg('Eliminado'); obtenerProductos(); cargarAdminData(); } }catch(e){ console.error(e); }
+    setLoading(false);
+  };
+
+  // configuración admin: guardar datos de Wimpy / empresa
+  const guardarConfiguracionAdmin = async (obj) => {
+    setLoading(true);
+    try{
+      // guardar con action=guardarWimpy&data=JSON
+      const data = encodeURIComponent(JSON.stringify(obj));
+      const r = await fetchAPI({ action: 'guardarWimpy', data });
+      if (r.success){ toastMsg('Configuración guardada'); cargarConfiguracion(); }
+      else toastMsg('Error guardando configuración');
+    }catch(e){ console.error(e); toastMsg('Error'); }
+    setLoading(false);
+  };
+
+  // generar cuenta de cobro mensual (admin)
+  const generarCuentaCobroAdmin = async (mesYYYYMM, codigoEmpresa) => {
+    if (!mesYYYYMM) return toastMsg('Formato mes: YYYY-MM');
+    setLoading(true);
+    try{
+      const r = await fetchAPI({ action: 'generarCuentaCobro', mes: mesYYYYMM, codigoEmpresa: codigoEmpresa || config.codigo_empresa || '01' });
+      if (r.success){ toastMsg('Cuenta generada: ' + r.consecutivo); window.open(r.driveUrl, '_blank'); }
+      else toastMsg('Error generando cuenta');
+    }catch(e){ console.error(e); toastMsg('Error'); }
+    setLoading(false);
+  };
+
+  // crear trigger backup
+  const crearTriggerBackupAdmin = async () => {
+    setLoading(true);
+    try{
+      const r = await fetchAPI({ action: 'crearTriggerBackup' });
+      if (r.success) toastMsg(r.message || 'Trigger creado');
+      else toastMsg('Error creando trigger');
+    }catch(e){ console.error(e); toastMsg('Error'); }
+    setLoading(false);
+  };
+
+  // obtener saldo puntos (cliente)
+  const actualizarSaldoPuntos = async (tel) => {
+    if (!tel) return;
+    try{
+      const r = await fetchAPI({ action: 'getSaldoPuntos', telefono: tel });
+      if (r.success) setSaldoPuntos(r.saldo || 0);
+    }catch(e){ console.error(e); }
+  };
+
+  // ===================== UTILIDAD UI =====================
+  const toastMsg = (m) => {
+    setToast(m);
+    setTimeout(()=>setToast(''), 5000);
+  };
+
+  // ===================== RENDERS =====================
+
+  // Home: elegir cliente o admin
+  if (screen === 'home'){
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700">
+          <div className="text-center mb-4">
+            <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-3xl">🍔</div>
+            <h1 className="text-2xl font-bold mt-4">🍔☕ WimpyApp</h1>
+            <p className="text-sm text-gray-400 mt-1">Pedidos, Fidelización y Facturación</p>
+          </div>
+
+          <div className="space-y-3">
+            <button onClick={()=>setScreen('clienteLogin')} className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-500 font-bold">👤 Cliente</button>
+            <button onClick={()=>setScreen('adminLogin')} className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 font-bold">🛠️ Administrador</button>
+          </div>
+
+          <div className="text-center text-xs text-gray-500 mt-4">Versión v4.5 — Modo oscuro forzado</div>
         </div>
+
+        {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-700 text-white px-4 py-2 rounded-lg shadow">{toast}</div>}
       </div>
-    </div>`;
-    node.appendChild(el);
+    );
+  }
+
+  // ========== CLIENTE - LOGIN ==========
+  if (screen === 'clienteLogin'){
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700">
+          <h2 className="text-xl font-bold mb-4">👤 Acceso Cliente</h2>
+          <label className="text-sm text-gray-300">Teléfono (ej: 3118336562)</label>
+          <input value={telefono} onChange={(e)=>setTelefono(e.target.value)} className="w-full mt-2 px-4 py-3 rounded-lg bg-gray-900 border border-gray-700" placeholder="3118336562" />
+
+          <div className="flex gap-2 mt-3">
+            <button onClick={generarPin} disabled={loading} className="flex-1 py-3 rounded-lg bg-indigo-600 font-semibold">Generar PIN</button>
+            <button onClick={()=>{ setScreen('home'); setTelefono(''); }} className="py-3 px-4 rounded-lg bg-gray-700">← Volver</button>
+          </div>
+
+          {pinGenerado && (
+            <div className="mt-4 bg-gray-900 p-3 rounded-lg border border-gray-700">
+              <div className="text-sm text-gray-300 mb-2">PIN generado (válido 3 min):</div>
+              <div className="flex gap-2 items-center">
+                <div className="text-lg font-mono px-3 py-2 bg-gray-800 rounded">{pinGenerado}</div>
+                <input value={pinInput} onChange={(e)=>setPinInput(e.target.value)} placeholder="Ingresa PIN" className="flex-1 px-3 py-2 rounded bg-gray-900 border border-gray-700" />
+                <button onClick={validarPin} className="px-4 py-2 bg-emerald-600 rounded">Ingresar</button>
+              </div>
+            </div>
+          )}
+
+          <div className="text-sm text-gray-500 mt-4">Al ingresar podrás ver Pedidos y Confirmar entrega.</div>
+        </div>
+        {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-700 text-white px-4 py-2 rounded-lg shadow">{toast}</div>}
+      </div>
+    );
+  }
+
+  // ========== CLIENTE - MENU ==========
+  if (screen === 'clienteMenu'){
+    return (
+      <div className="min-h-screen p-4">
+        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-1 bg-gray-800 rounded-xl p-4 border border-gray-700">
+            <h3 className="font-bold text-lg">Hola {clienteNombre || telefono}</h3>
+            <p className="text-sm text-gray-400">Saldo puntos: <strong>{saldoPuntos}</strong></p>
+            <div className="mt-4 space-y-2">
+              <button onClick={()=>setScreen('clientePedidos')} className="w-full py-3 rounded-lg bg-indigo-600 font-semibold">🛒 Pedidos</button>
+              <button onClick={async ()=>{ await confirmarEntregaCliente(); }} className="w-full py-3 rounded-lg bg-emerald-600 font-semibold">📦 Confirmar entrega</button>
+              <button onClick={()=>{ setScreen('home'); setTelefono(''); setClienteNombre(''); }} className="w-full py-2 rounded-lg bg-gray-700">Cerrar sesión</button>
+            </div>
+            <div className="mt-4 text-xs text-gray-500">WimpyApp - {nowStr()}</div>
+          </div>
+
+          <div className="md:col-span-2 bg-gray-800 rounded-xl p-4 border border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex gap-2">
+                <input className="px-3 py-2 rounded bg-gray-900 border border-gray-700" placeholder="Buscar productos..." value={buscador} onChange={(e)=>setBuscador(e.target.value)} />
+                <select className="px-3 py-2 rounded bg-gray-900 border border-gray-700" value={categoriaFilter} onChange={(e)=>setCategoriaFilter(e.target.value)}>
+                  <option value="">Todas</option>
+                  {[...new Set(productos.map(p=>p.categoria).filter(Boolean))].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <div className="text-sm text-gray-300">Total carrito: <strong>${formatMoney(totalCart)}</strong></div>
+                <button onClick={()=>document.getElementById('openCartBtn').click()} className="mt-2 px-3 py-2 bg-yellow-500 text-black rounded">Ver carrito</button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {productos.filter(p => p.activo).filter(p => (p.nombre.toLowerCase().includes(buscador.toLowerCase()) || !buscador)).filter(p => (!categoriaFilter || p.categoria === categoriaFilter)).map(p => (
+                <div key={p.id} className="bg-gray-900 p-3 rounded-lg border border-gray-700 flex items-start justify-between">
+                  <div>
+                    <div className="font-semibold">{p.nombre}</div>
+                    <div className="text-xs text-gray-400">{p.categoria}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold">${formatMoney(p.precio)}</div>
+                    <button onClick={()=>addProductToCart(p)} className="mt-2 px-3 py-1 rounded bg-indigo-600 text-white">Agregar</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* carrito modal (simple) */}
+        <button id="openCartBtn" className="hidden" onClick={()=>{
+          const el = document.getElementById('cartModal');
+          if (el) el.classList.remove('hidden');
+        }}>open</button>
+        <div id="cartModal" className="hidden fixed inset-0 bg-black/60 flex items-end md:items-center justify-center p-4">
+          <div className="w-full max-w-md bg-gray-800 rounded-t-xl md:rounded-xl p-4 border border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold">Carrito</h3>
+              <button onClick={()=>{ document.getElementById('cartModal').classList.add('hidden'); }} className="text-gray-400">Cerrar</button>
+            </div>
+
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {cart.length === 0 && <div className="text-gray-400">Carrito vacío</div>}
+              {cart.map(i => (
+                <div key={i.id} className="flex items-center justify-between bg-gray-900 p-2 rounded">
+                  <div>
+                    <div className="font-semibold">{i.nombre}</div>
+                    <div className="text-xs text-gray-400">x{i.cantidad} • ${formatMoney(i.precio)}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={()=>changeQty(i.id,-1)} className="px-2 py-1 bg-gray-700 rounded">-</button>
+                    <div className="w-6 text-center">{i.cantidad}</div>
+                    <button onClick={()=>changeQty(i.id,1)} className="px-2 py-1 bg-gray-700 rounded">+</button>
+                    <button onClick={()=>removeFromCart(i.id)} className="ml-2 text-red-400">✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4">
+              <div className="flex items-center justify-between">
+                <div>Total:</div>
+                <div className="font-bold">${formatMoney(totalCart)}</div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button onClick={confirmarPedido} className="py-3 rounded bg-emerald-600">Confirmar pedido</button>
+                <button onClick={()=>{ setCart([]); toastMsg('Carrito limpiado'); }} className="py-3 rounded bg-gray-700">Limpiar</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-700 text-white px-4 py-2 rounded-lg shadow">{toast}</div>}
+      </div>
+    );
+  }
+
+  // ========== ADMIN - LOGIN ==========
+  if (screen === 'adminLogin'){
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700">
+          <h2 className="text-xl font-bold mb-4">🔒 Panel Administrador</h2>
+          <input placeholder="PIN administrador" value={adminPinInput} onChange={(e)=>setAdminPinInput(e.target.value)} className="w-full px-4 py-3 rounded bg-gray-900 border border-gray-700" />
+          <div className="flex gap-2 mt-3">
+            <button onClick={intentarAdminLogin} className="flex-1 py-3 rounded bg-orange-500 font-semibold">Ingresar</button>
+            <button onClick={()=>setScreen('home')} className="py-3 px-4 rounded bg-gray-700">Volver</button>
+          </div>
+          <div className="text-sm text-gray-500 mt-3">PIN por defecto: 1995</div>
+        </div>
+        {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-700 text-white px-4 py-2 rounded-lg shadow">{toast}</div>}
+      </div>
+    );
+  }
+
+  // ========== ADMIN - PANEL ==========
+  if (adminAuth && screen !== 'home'){
+    return (
+      <div className="min-h-screen p-4">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-6 gap-4">
+          <aside className="md:col-span-1 bg-gray-800 rounded-xl p-4 border border-gray-700">
+            <div className="font-bold text-lg">Admin</div>
+            <div className="text-sm text-gray-400">WimpyApp</div>
+            <nav className="mt-4 space-y-2">
+              <button className={"w-full text-left px-3 py-2 rounded " + (adminView==='dashboard'?'bg-gray-700':'')} onClick={()=>setAdminView('dashboard')}>📊 Dashboard</button>
+              <button className={"w-full text-left px-3 py-2 rounded " + (adminView==='productos'?'bg-gray-700':'')} onClick={()=>setAdminView('productos')}>🧾 Productos</button>
+              <button className={"w-full text-left px-3 py-2 rounded " + (adminView==='clientes'?'bg-gray-700':'')} onClick={()=>setAdminView('clientes')}>👥 Clientes</button>
+              <button className={"w-full text-left px-3 py-2 rounded " + (adminView==='pedidos'?'bg-gray-700':'')} onClick={()=>setAdminView('pedidos')}>📦 Pedidos</button>
+              <button className={"w-full text-left px-3 py-2 rounded " + (adminView==='cuentas'?'bg-gray-700':'')} onClick={()=>setAdminView('cuentas')}>🧾 Cuentas de Cobro</button>
+              <button className={"w-full text-left px-3 py-2 rounded " + (adminView==='config'?'bg-gray-700':'')} onClick={()=>setAdminView('config')}>⚙️ Configuración</button>
+              <button onClick={()=>{ setAdminAuth(false); setScreen('home'); toastMsg('Sesión cerrada'); }} className="w-full text-left px-3 py-2 rounded bg-red-600 mt-4">Cerrar sesión</button>
+            </nav>
+          </aside>
+
+          <main className="md:col-span-5 bg-gray-800 rounded-xl p-4 border border-gray-700">
+            {adminView === 'dashboard' && (
+              <div>
+                <h3 className="text-xl font-bold mb-3">📊 Dashboard</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="p-4 bg-gray-900 rounded">
+                    <div className="text-sm text-gray-400">Productos</div>
+                    <div className="text-2xl font-bold">{productosAdmin.length}</div>
+                  </div>
+                  <div className="p-4 bg-gray-900 rounded">
+                    <div className="text-sm text-gray-400">Clientes</div>
+                    <div className="text-2xl font-bold">{clientesAdmin.length}</div>
+                  </div>
+                  <div className="p-4 bg-gray-900 rounded">
+                    <div className="text-sm text-gray-400">Pedidos</div>
+                    <div className="text-2xl font-bold">{pedidosAdmin.length}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {adminView === 'productos' && (
+              <div>
+                <h3 className="text-xl font-bold mb-3">🧾 Productos</h3>
+
+                <ProductAdminList productos={productosAdmin} onEliminar={eliminarProductoAdmin} onRefrescar={() => { obtenerProductos(); cargarAdminData(); }} onAgregar={agregarProductoAdmin} />
+              </div>
+            )}
+
+            {adminView === 'clientes' && (
+              <div>
+                <h3 className="text-xl font-bold mb-3">👥 Clientes</h3>
+                <div className="space-y-2">
+                  {clientesAdmin.length === 0 && <div className="text-gray-400">No hay clientes</div>}
+                  {clientesAdmin.map(c => (
+                    <div key={c.telefono} className="p-3 bg-gray-900 rounded flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold">{c.nombre}</div>
+                        <div className="text-xs text-gray-400">{c.telefono} • {c.email}</div>
+                      </div>
+                      <div className="text-sm text-gray-300">Puntos: {c.puntosTotales}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {adminView === 'pedidos' && (
+              <div>
+                <h3 className="text-xl font-bold mb-3">📦 Pedidos</h3>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {pedidosAdmin.length === 0 && <div className="text-gray-400">Sin pedidos</div>}
+                  {pedidosAdmin.slice().reverse().map(p => (
+                    <div key={p.idpedido} className="p-3 bg-gray-900 rounded flex items-start justify-between">
+                      <div>
+                        <div className="font-semibold">{p.nombre || p.telefono}</div>
+                        <div className="text-xs text-gray-400">{p.fechaPedido} • {p.idpedido}</div>
+                        <div className="text-xs mt-2 text-gray-300">Productos: {p.productosJSON}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-gray-300">Estado: {p.estado}</div>
+                        <div className="text-lg font-bold mt-2">${formatMoney(p.valorTotal)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {adminView === 'cuentas' && (
+              <div>
+                <h3 className="text-xl font-bold mb-3">🧾 Generar Cuenta de Cobro</h3>
+                <CuentaCobroForm onGenerar={generarCuentaCobroAdmin} />
+                <div className="text-xs text-gray-400 mt-3">Consecutivo: AAAAMM + código empresa + correlativo (ej: 2025100101)</div>
+              </div>
+            )}
+
+            {adminView === 'config' && (
+              <div>
+                <h3 className="text-xl font-bold mb-3">⚙️ Configuración</h3>
+                <ConfigForm config={config} onGuardar={guardarConfiguracionAdmin} crearTriggerBackup={crearTriggerBackupAdmin} onRefrescar={cargarConfiguracion} />
+              </div>
+            )}
+
+          </main>
+        </div>
+
+        {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-700 text-white px-4 py-2 rounded-lg shadow">{toast}</div>}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+/* ================== COMPONENTES ================== */
+
+function ProductAdminList({ productos, onEliminar, onRefrescar, onAgregar }){
+  const [nombre, setNombre] = useState('');
+  const [precio, setPrecio] = useState('');
+  const [cat, setCat] = useState('');
+  return (
+    <div>
+      <div className="mb-3 grid grid-cols-1 md:grid-cols-4 gap-2">
+        <input value={nombre} onChange={(e)=>setNombre(e.target.value)} placeholder="Nombre" className="px-3 py-2 rounded bg-gray-900 border border-gray-700" />
+        <input value={precio} onChange={(e)=>setPrecio(e.target.value)} placeholder="Precio (entero)" type="number" className="px-3 py-2 rounded bg-gray-900 border border-gray-700" />
+        <input value={cat} onChange={(e)=>setCat(e.target.value)} placeholder="Categoría" className="px-3 py-2 rounded bg-gray-900 border border-gray-700" />
+        <button onClick={()=>{ onAgregar(nombre, precio, cat); setNombre(''); setPrecio(''); setCat(''); }} className="px-3 py-2 rounded bg-emerald-600">+ Agregar</button>
+      </div>
+
+      <div className="space-y-2">
+        {productos.length === 0 && <div className="text-gray-400">No hay productos</div>}
+        {productos.map(p => (
+          <div key={p.id} className="p-3 bg-gray-900 rounded flex items-center justify-between">
+            <div>
+              <div className="font-semibold">{p.nombre}</div>
+              <div className="text-xs text-gray-400">{p.categoria}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="font-bold">${formatMoney(p.precio)}</div>
+              <button onClick={()=>onEliminar(p.id)} className="px-3 py-1 rounded bg-red-600">Eliminar</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CuentaCobroForm({ onGenerar }){
+  const [mes, setMes] = useState(() => {
+    const d = new Date(); return `${d.getFullYear()}-${('0'+(d.getMonth()+1)).slice(-2)}`;
   });
-  node.querySelectorAll('button[data-apr]').forEach(b=> b.addEventListener('click', async ()=>{ const ts=b.dataset.apr; if(!confirm('Aprobar pedido?')) return; const res=await getJSON(`${GOOGLE_SHEETS_API}?action=aprobarPedido&timestamp=${encodeURIComponent(ts)}`); if(res && res.success){ alert('Pedido aprobado'); await loadHistorial(); renderAdminPedidos(); } else alert('Error'); }));
-  node.querySelectorAll('button[data-ent]').forEach(b=> b.addEventListener('click', async ()=>{ const ts=b.dataset.ent; if(!confirm('Marcar como entregado?')) return; const res=await getJSON(`${GOOGLE_SHEETS_API}?action=confirmarEntrega&timestamp=${encodeURIComponent(ts)}`); if(res && res.success){ alert('Registrado como entregado'); await loadHistorial(); renderAdminPedidos(); renderStats(); } else alert('Error'); }));
-  node.querySelectorAll('button[data-invoice]').forEach(b=> b.addEventListener('click', async ()=>{ const ts=b.dataset.invoice; const res=await getJSON(`${GOOGLE_SHEETS_API}?action=generarCuentaCobro&timestamp=${encodeURIComponent(ts)}&enviarEmail=`); if(res && res.success) alert('Cuenta generada: '+(res.driveUrl||res.driveId)); else alert('Error'); }));
+  const [codigo, setCodigo] = useState('');
+  return (
+    <div className="bg-gray-900 p-4 rounded">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <input type="month" value={mes} onChange={(e)=>setMes(e.target.value)} className="px-3 py-2 rounded bg-gray-800 border border-gray-700" />
+        <input placeholder="Código empresa (ej: 01)" value={codigo} onChange={(e)=>setCodigo(e.target.value)} className="px-3 py-2 rounded bg-gray-800 border border-gray-700" />
+        <button onClick={()=>onGenerar(mes, codigo)} className="px-3 py-2 rounded bg-indigo-600">Generar PDF</button>
+      </div>
+    </div>
+  );
 }
 
-/* Facturación admin */
-$('#btnGenPdfMensual').addEventListener('click', async ()=>{ const mes = $('#factMes').value; if(!mes) return alert('Selecciona mes'); const res=await getJSON(`${GOOGLE_SHEETS_API}?action=generarCuentaCobroMensual&mes=${encodeURIComponent(mes)}`); if(res && res.success) alert('PDF generado: '+(res.driveUrl||res.driveId)); else alert('Error'); });
-$('#btnGenExcelMensual').addEventListener('click', async ()=>{ const mes = $('#factMes').value; if(!mes) return alert('Selecciona mes'); const res=await getJSON(`${GOOGLE_SHEETS_API}?action=generarExcelDetallePorEmpleado&mes=${encodeURIComponent(mes)}`); if(res && res.success) alert('Excel: '+(res.driveUrl||res.driveId)); else alert('Error'); });
-$('#btnGenInvoice').addEventListener('click', async ()=>{ const ts = $('#invoiceTimestamp').value.trim(); if(!ts) return alert('Ingresa timestamp'); const res = await getJSON(`${GOOGLE_SHEETS_API}?action=generarCuentaCobro&timestamp=${encodeURIComponent(ts)}&enviarEmail=`); if(res && res.success) alert('Cuenta generada: '+(res.driveUrl||res.driveId)); else alert('Error'); });
+function ConfigForm({ config, onGuardar, crearTriggerBackup, onRefrescar }){
+  const [form, setForm] = useState(config || {});
+  useEffect(()=> setForm(config || {}), [config]);
+  const onChange = (k,v) => setForm({...form, [k]: v});
+  return (
+    <div className="bg-gray-900 p-4 rounded space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <input value={form.nombre_wimpy || ''} onChange={(e)=>onChange('nombre_wimpy', e.target.value)} className="px-3 py-2 rounded bg-gray-800" placeholder="Nombre Wimpy" />
+        <input value={form.nit_wimpy || ''} onChange={(e)=>onChange('nit_wimpy', e.target.value)} className="px-3 py-2 rounded bg-gray-800" placeholder="NIT Wimpy" />
+        <input value={form.direccion_wimpy || ''} onChange={(e)=>onChange('direccion_wimpy', e.target.value)} className="px-3 py-2 rounded bg-gray-800" placeholder="Dirección Wimpy" />
+        <input value={form.correo_wimpy || ''} onChange={(e)=>onChange('correo_wimpy', e.target.value)} className="px-3 py-2 rounded bg-gray-800" placeholder="Correo Wimpy" />
+        <input value={form.numero_wimpy || ''} onChange={(e)=>onChange('numero_wimpy', e.target.value)} className="px-3 py-2 rounded bg-gray-800" placeholder="Número WhatsApp Wimpy" />
+        <input value={form.codigo_empresa || ''} onChange={(e)=>onChange('codigo_empresa', e.target.value)} className="px-3 py-2 rounded bg-gray-800" placeholder="Código empresa (ej: 01)" />
+      </div>
 
-/* Promos admin */
-$('#btnAddPromo').addEventListener('click', async ()=>{
-  const nombre = $('#promoNombre').value.trim(), filtro = $('#promoFiltro').value.trim(), mult = parseFloat($('#promoMult').value.trim());
-  if(!nombre || !filtro || isNaN(mult)) return alert('Completa datos');
-  const res = await getJSON(`${GOOGLE_SHEETS_API}?action=agregarPromo&nombre=${encodeURIComponent(nombre)}&filtro=${encodeURIComponent(filtro)}&mult=${encodeURIComponent(mult)}`);
-  if(res && res.success){ $('#promoNombre').value=''; $('#promoFiltro').value=''; $('#promoMult').value=''; await loadPromos(); renderPromos(); } else alert('Error');
-});
-async function renderPromos(){ await loadPromos(); const node = $('#promosList'); node.innerHTML = ''; if(!promos.length) { node.innerHTML='<div class="muted">No hay promos</div>'; return; } promos.forEach(p=>{ const el=document.createElement('div'); el.className='card'; el.innerHTML=`<div style="display:flex;justify-content:space-between"><div><div style="font-weight:700">${esc(p.nombre)}</div><div class="muted">Filtro: ${esc(p.filtro)} • x${esc(p.mult)}</div></div><div><button data-delpromo="${p.id}" class="btn-ghost small">Eliminar</button></div></div>`; node.appendChild(el); }); node.querySelectorAll('button[data-delpromo]').forEach(b=> b.addEventListener('click', async ()=>{ if(!confirm('Eliminar promo?')) return; const id=b.dataset.delpromo; const res=await getJSON(`${GOOGLE_SHEETS_API}?action=eliminarPromo&id=${encodeURIComponent(id)}`); if(res && res.success) await loadPromos(), renderPromos(); else alert('Error'); })); }
-
-/* Configuración */
-$('#btnGuardarCfg').addEventListener('click', async ()=>{
-  const numero = $('#cfgNumeroWimpy').value.trim(), nombre = $('#cfgNombreW').value.trim(), nit = $('#cfgNIT').value.trim();
-  const empNombre = $('#cfgEmpresaNombre').value.trim(), empNit = $('#cfgEmpresaNIT').value.trim(), empCodigo = $('#cfgCodigoEmpresa').value.trim();
-  const data = { numero: numero, nombre:nombre, nit:nit, empresaNombre: empNombre, empresaNit: empNit, empresaCodigo: empCodigo };
-  const res = await getJSON(`${GOOGLE_SHEETS_API}?action=guardarWimpy&data=${encodeURIComponent(JSON.stringify(data))}`);
-  if(res && res.success) alert('Guardado'); else alert('Error');
-});
-$('#btnCargarCfg').addEventListener('click', loadConfig);
-async function loadConfig(){
-  const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerConfiguracion`);
-  if(r && r.success){
-    $('#cfgNumeroWimpy').value = r.numero || '';
-    $('#cfgNombreW').value = (r.wimpy && r.wimpy.nombre) || '';
-    $('#cfgNIT').value = (r.wimpy && r.wimpy.nit) || '';
-    $('#cfgEmpresaNombre').value = (r.empresa && r.empresa.nombre) || '';
-    $('#cfgEmpresaNIT').value = (r.empresa && r.empresa.nit) || '';
-    $('#cfgCodigoEmpresa').value = (r.empresa && r.empresa.codigo) || '';
-    window.NUMERO_WIMPY = r.numero || NUMERO_WIMPY;
-  } else alert('Error cargando configuración');
+      <div className="flex gap-2">
+        <button onClick={()=>onGuardar(form)} className="px-3 py-2 rounded bg-emerald-600">Guardar</button>
+        <button onClick={()=>crearTriggerBackup()} className="px-3 py-2 rounded bg-indigo-600">Activar Backup Diario</button>
+        <button onClick={()=>onRefrescar()} className="px-3 py-2 rounded bg-gray-700">Refrescar</button>
+      </div>
+      <div className="text-xs text-gray-400">Logo/firma: coloca el ID de Drive en la configuración (logo_wimpy / firma_digital). Si no existen, no genera error.</div>
+    </div>
+  );
 }
 
-/* Backups */
-$('#btnBackupNow').addEventListener('click', async ()=>{ const res = await getJSON(`${GOOGLE_SHEETS_API}?action=backupDiario`); if(res && res.success) { $('#backupLog').textContent = 'Backup creado: '+(res.driveUrl||res.driveId); alert('Backup creado'); } else alert('Error'); });
-$('#btnCrearTrigger').addEventListener('click', async ()=>{ const res = await getJSON(`${GOOGLE_SHEETS_API}?action=crearTriggerBackup`); if(res && res.success) alert('Trigger creado'); else alert('Error'); });
+/* ============ Renderizar app ============ */
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
 
-/* Stats */
-function renderStats(){ $('#stat_total').textContent = historial.length; $('#stat_pend').textContent = historial.filter(h=>h.estado==='pendiente').length; $('#stat_ent').textContent = historial.filter(h=>h.estado==='entregado').length; getJSON(`${GOOGLE_SHEETS_API}?action=getTotalPuntos`).then(r=>{ $('#stat_pts').textContent = r && r.success ? (r.total||0) : 0; }); }
-
-/* Init */
-(async function init(){
-  await loadProductos(); await loadClientes(); await loadHistorial(); await loadPromos();
-  // render short initial data if needed
-})();
-</script>
+  </script>
 </body>
 </html>

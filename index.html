@@ -10,7 +10,7 @@
         header { background-color: #1f1f1f; padding: 15px; text-align: center; font-size: 1.4em; color: #fff; }
         .main-nav { display: flex; justify-content: center; background-color: #1f1f1f; padding: 20px; gap: 20px; }
         /* Botones de navegación principal y menú de cliente */
-        .main-nav button, #menu-cliente button { 
+        .main-nav button, #menu-cliente button, #admin-panel-menu nav button { 
             background-color: #4e44e2; 
             color: #fff; 
             border: none; 
@@ -19,7 +19,7 @@
             cursor: pointer; 
             font-size: 1.1em; 
             transition: background-color 0.3s; 
-            flex-grow: 1; /* Para que ocupen el mismo ancho */
+            flex-grow: 1; 
         }
         .main-nav button:hover, #menu-cliente button:hover { background-color: #332a9e; }
         section { padding: 15px; }
@@ -33,21 +33,15 @@
         .btn-danger { background-color: #e24444; }
         .btn-whatsapp { background-color: #25D366; color: white; padding: 15px; font-size: 1.2em; margin-top: 20px; width: 100%; }
 
-        /* Estilos del Carrito y Productos */
-        .producto-card { display: flex; justify-content: space-between; align-items: center; background-color: #1f1f1f; padding: 10px; margin-bottom: 10px; border-radius: 6px; }
-        .producto-info { flex-grow: 1; }
-        .producto-info h4 { margin: 0; font-size: 1.1em; }
-        .producto-info p { margin: 0; color: #aaa; font-size: 0.9em; }
-        .producto-controls { display: flex; align-items: center; gap: 8px; }
-        .qty-btn { background-color: #333; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        .qty-display { min-width: 20px; text-align: center; }
-
-        /* Carrito de Compras */
-        #carrito-resumen { background-color: #2c2c2c; padding: 15px; border-radius: 8px; margin-top: 20px; }
-        #carrito-resumen div { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        /* Estilos del Carrito y Mensajes */
         .mensaje { padding: 10px; margin: 10px 0; border-radius: 4px; }
         .mensaje.success { background-color: #44e24e50; border: 1px solid #44e24e; color: #fff; }
         .mensaje.error { background-color: #e2444450; border: 1px solid #e24444; color: #fff; }
+        .pedido-card { background-color: #2c2c2c; padding: 10px; margin-bottom: 10px; border-radius: 6px; }
+        
+        /* Admin */
+        #admin-panel-menu { margin-top: 20px; }
+        #admin-panel-menu nav { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -61,9 +55,9 @@
 
 <section id="cliente" class="oculto">
     
-    <h2>👋 Ingrese su Teléfono</h2>
-    <div id="clienteMessage" class="mensaje oculto"></div>
     <div id="datos-cliente-form">
+        <h2>👋 Ingrese su Teléfono</h2>
+        <div id="clienteMessage" class="mensaje oculto"></div>
         <label for="telefonoCliente">Su Teléfono (WhatsApp):</label>
         <input type="number" id="telefonoCliente" oninput="validarTelefonoYBuscarInfo()" required>
         
@@ -77,13 +71,13 @@
             <label for="autorizaDatos" style="display: inline;">Autorizo el tratamiento de mis datos personales según la <a href="#" id="politicaLink" target="_blank" style="color: #4e44e2;">Política de Wimpy</a>.</label>
         </div>
         <button class="btn" onclick="iniciarPedido()" id="btn-iniciar-pedido" disabled>Acceder al Menú</button>
-        <button class="btn btn-secondary" onclick="iniciarSesionCliente()" style="width: 100%; margin-top: 15px;">⬅️ Regresar</button>
+        <button class="btn btn-secondary" onclick="mostrar('vista-inicial')" style="width: 100%; margin-top: 15px;">⬅️ Regresar</button>
     </div>
 
     <div id="menu-cliente" class="oculto">
-        <h2 style="text-align: center;">Bienvenido, <span id="cliente-nombre-menu">Cliente</span></h2>
+        <h2 style="text-align: center;"><span id="cliente-nombre-menu"></span>, ¡qué bueno verte de nuevo!</h2>
         <div class="main-nav" style="flex-direction: column; padding: 10px 0;">
-            <button onclick="mostrarAreaPedido()">🛒 **Hacer Pedido**</button>
+            <button onclick="mostrarAreaPedido()">🛒 **Hacer Nuevo Pedido**</button>
             <button onclick="mostrarConfirmacionRecibido()">✅ **Confirmar Recibido de Pedidos**</button>
             <button class="btn-secondary" onclick="iniciarSesionCliente()" style="background-color: #333; margin-top: 20px; color: #ccc;">⬅️ Cambiar Cliente / Salir</button>
         </div>
@@ -102,7 +96,6 @@
                 <input type="number" id="puntosACanjear" value="0" min="0" oninput="renderizarCarrito()" style="width: 100px; padding: 5px; display: inline-block;">
                 <hr style="border-top: 1px dashed #555; margin: 10px 0;">
             </div>
-            
             <div><span>Subtotal (Neto):</span> <span id="subtotalPedido">$0 COP</span></div>
             <div><span>Descuento por Puntos:</span> <span id="descuentoPuntosInfo">$0 COP</span></div>
             <div style="border-top: 1px solid #555; padding-top: 10px; font-size: 1.2em; font-weight: bold;">
@@ -124,15 +117,59 @@
 
 </section>
 
-<section id="admin" class="oculto">...</section>
-<section id="configuracion" class="oculto admin-section">...</section>
-<section id="clientes" class="oculto admin-section">...</section>
+<section id="admin" class="oculto">
+    <h2>Panel de Administrador</h2>
+    <div id="adminMessage" class="mensaje oculto"></div>
+    
+    <div id="admin-login">
+        <label for="adminPin">PIN de Administrador:</label>
+        <input type="password" id="adminPin">
+        <button class="btn" onclick="iniciarSesionAdmin()">Acceder</button>
+        <button class="btn btn-secondary" onclick="mostrar('vista-inicial')" style="width: 100%; margin-top: 15px;">⬅️ Regresar</button>
+    </div>
+    
+    <div id="admin-panel-menu" class="oculto">
+        <nav>
+            <button onclick="mostrarAdminSection('configuracion')">⚙️ Configuración</button>
+            <button onclick="mostrarAdminSection('clientes')">👥 Clientes</button>
+            <button onclick="mostrarAdminSection('productos')">🍕 Productos</button>
+            <button onclick="mostrarAdminSection('historial')">🧾 Historial</button>
+            <button onclick="mostrarAdminSection('mensajeria')">📧 Mensajería</button>
+            <button class="btn-danger" onclick="adminLogout()" style="flex-grow: 0;">🔒 Salir</button>
+        </nav>
+        <div id="admin-content">
+            <p>Seleccione una opción del menú superior.</p>
+        </div>
+    </div>
+    <div id="configuracion" class="oculto admin-section">
+        <h3>Configuración General</h3>
+        <label for="numeroWimpy">Número WhatsApp Wimpy:</label>
+        <input type="text" id="numeroWimpy" value="57311XXXXXXX">
+        <label for="valorPunto">Valor de 1 Punto (COP):</label>
+        <input type="number" id="valorPunto" value="20">
+        <button class="btn" onclick="guardarConfiguracion()">Guardar Configuración</button>
+    </div>
+    <div id="clientes" class="oculto admin-section">
+         <h3>Gestión de Clientes</h3>
+         </div>
+    <div id="productos" class="oculto admin-section">
+        <h3>Gestión de Productos</h3>
+         </div>
+    <div id="historial" class="oculto admin-section">
+        <h3>Historial de Pedidos</h3>
+         </div>
+    <div id="mensajeria" class="oculto admin-section">
+        <h3>Mensajería</h3>
+         </div>
+</section>
+
 <script>
 // === CONFIGURACIÓN CRÍTICA DEL SISTEMA ===
+// **ATENCIÓN: Debe reemplazar esta URL con la que obtenga de su Apps Script desplegado.**
 const GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec'; 
-let adminAcceso = false;
-const ADMIN_PIN_CLIENTE = "1995";
+const ADMIN_PIN_SECRETO = "1995"; // PIN para acceder al panel. Cambiar por algo más seguro.
 const STORAGE_CONSENT = 'wimpy_data_consent'; 
+let adminAcceso = false;
 let puntosMaximos = 0; 
 let valorPunto = 20; 
 let clienteNombre = ''; 
@@ -143,7 +180,7 @@ let productosDisponibles = [];
 // Inicializar la App
 document.addEventListener('DOMContentLoaded', () => {
     mostrar('vista-inicial');
-    // cargarPoliticaUrl(); // Debe estar implementada
+    // cargarPoliticaUrl(); // Función pendiente de implementar que carga la URL
 });
 
 // ------------------------------------------------------------------
@@ -151,35 +188,44 @@ document.addEventListener('DOMContentLoaded', () => {
 // ------------------------------------------------------------------
 
 function mostrar(seccion) {
-    document.querySelectorAll('section, .main-nav').forEach(s => s.classList.add('oculto'));
+    document.querySelectorAll('section, .main-nav, #datos-cliente-form, #menu-cliente, #area-pedido, #area-confirmar-recibido, #admin-login, #admin-panel-menu').forEach(s => s.classList.add('oculto'));
     document.getElementById(seccion).classList.remove('oculto');
 }
 
-// ... (accederAdmin, iniciarSesionAdmin, adminLogout, llamarAPIAdmin, etc. se mantienen) ...
+function mostrarAdminSection(seccion) {
+    document.querySelectorAll('.admin-section').forEach(s => s.classList.add('oculto'));
+    const sectionElement = document.getElementById(seccion);
+    if (sectionElement) {
+        sectionElement.classList.remove('oculto');
+        // Aquí se llamarían funciones de carga específicas (ej. cargarClientes(), cargarHistorial())
+    }
+}
+
+function mostrarMensaje(id, texto, tipo) {
+    const elemento = document.getElementById(id);
+    elemento.innerHTML = texto;
+    elemento.className = `mensaje ${tipo}`;
+    elemento.classList.remove('oculto');
+    setTimeout(() => {
+        elemento.classList.add('oculto');
+    }, 5000);
+}
 
 // ------------------------------------------------------------------
-// --- CLIENTE: FLUJO DE PEDIDO CON MENÚ (LÓGICA ACTUALIZADA) ---
+// --- CLIENTE: FLUJO DE ACCESO ---
 // ------------------------------------------------------------------
 
 function iniciarSesionCliente() {
     mostrar('cliente');
-    // Mostrar solo el formulario de ingreso de teléfono al inicio
     document.getElementById('datos-cliente-form').classList.remove('oculto');
-    document.getElementById('menu-cliente').classList.add('oculto');
-    document.getElementById('area-pedido').classList.add('oculto');
-    document.getElementById('area-confirmar-recibido').classList.add('oculto');
-    
-    // Limpiar campos y banderas
     document.getElementById('telefonoCliente').value = '';
     document.getElementById('btn-iniciar-pedido').disabled = true;
     document.getElementById('client-info-display').classList.add('oculto');
     clienteNombre = '';
     puntosMaximos = 0;
+    carrito = []; // Limpiar carrito al salir/regresar al inicio
 }
 
-/**
- * Función que se ejecuta al ingresar el teléfono para buscar la información.
- */
 async function validarTelefonoYBuscarInfo() {
     const telefono = document.getElementById('telefonoCliente').value.trim();
     const btnIniciar = document.getElementById('btn-iniciar-pedido');
@@ -192,51 +238,56 @@ async function validarTelefonoYBuscarInfo() {
         return; 
     }
     
-    // Asumiendo que esta función llama a 'obtenerInfoCliente' del backend
-    // ... (Lógica de API para buscar cliente, puntos y pedidos pendientes) ...
-    // Placeholder de Lógica:
-    const data = { success: true, nombre: 'Empresa Demo', puntos: 1500, valorPunto: 20, programaPuntosActivo: true, hasPendingOrders: false };
+    mostrarMensaje('clienteMessage', 'Buscando cliente y estado de pedidos...', 'success');
+
+    const formData = new FormData();
+    formData.append('action', 'obtenerInfoCliente'); 
+    formData.append('telefono', telefono);
     
-    if (data.success) {
+    try {
+        const response = await fetch(GOOGLE_SHEETS_API, { method: 'POST', body: formData });
+        const data = await response.json();
+        
         document.getElementById('clienteMessage').classList.add('oculto');
 
-        // 1. CHEQUEAR PEDIDOS PENDIENTES
-        if (data.hasPendingOrders) {
-            mostrarMensaje('clienteMessage', '🚨 **Pedido Pendiente:** Debe esperar la confirmación del administrador para cualquier pedido anterior (estado "Pendiente").', 'error');
-            return;
+        if (data.success) {
+            
+            if (data.hasPendingOrders) {
+                mostrarMensaje('clienteMessage', '🚨 **Pedido Pendiente:** Debe esperar la confirmación del administrador antes de hacer un nuevo pedido.', 'error');
+                return;
+            }
+
+            clienteNombre = data.nombre;
+            puntosMaximos = data.puntos || 0;
+            valorPunto = data.valorPunto || 20;
+            programaPuntosActivo = data.programaPuntosActivo || false;
+
+            document.getElementById('cliente-nombre-display').textContent = clienteNombre;
+            document.getElementById('puntos-disponibles-display').textContent = puntosMaximos.toLocaleString('es-CO') + ' pts';
+            infoDisplay.classList.remove('oculto');
+            
+            if (programaPuntosActivo) {
+                 document.getElementById('valor-punto-display').textContent = valorPunto.toLocaleString('es-CO');
+            }
+
+            btnIniciar.disabled = false; 
+
+        } else {
+             mostrarMensaje('clienteMessage', 'Cliente no registrado o error: ' + (data.error || 'Desconocido'), 'error');
         }
 
-        // 2. ACTUALIZAR INFO DEL CLIENTE
-        clienteNombre = data.nombre;
-        puntosMaximos = data.puntos || 0;
-        valorPunto = data.valorPunto || 20;
-        programaPuntosActivo = data.programaPuntosActivo || false;
-
-        document.getElementById('cliente-nombre-display').textContent = clienteNombre;
-        document.getElementById('puntos-disponibles-display').textContent = puntosMaximos.toLocaleString('es-CO') + ' pts';
-        infoDisplay.classList.remove('oculto');
-        
-        if (programaPuntosActivo) {
-             document.getElementById('valor-punto-display').textContent = valorPunto.toLocaleString('es-CO');
-        }
-
-        btnIniciar.disabled = false; 
-
-    } else {
-         mostrarMensaje('clienteMessage', 'Error al consultar datos o Cliente no encontrado.', 'error');
+    } catch (error) {
+        mostrarMensaje('clienteMessage', 'Error de conexión con la API.', 'error');
     }
 }
 
-
-/**
- * Transiciona del formulario de teléfono al nuevo Menú Principal de Cliente.
- */
 function iniciarPedido() {
     const telefono = document.getElementById("telefonoCliente").value.trim();
     const autorizaDatos = document.getElementById("autorizaDatos").checked;
     
-    if (!telefono || !clienteNombre) {
-        mostrarMensaje('clienteMessage', 'El teléfono no ha sido validado.', 'error');
+    if (!telefono || !clienteNombre || document.getElementById('btn-iniciar-pedido').disabled) {
+        // Esto previene el click si no se ha validado el teléfono
+        mostrarMensaje('clienteMessage', 'El teléfono no ha sido validado o tiene pedidos pendientes.', 'error');
         return;
     }
 
@@ -245,99 +296,65 @@ function iniciarPedido() {
         return;
     }
     
-    // 1. Ocultar formulario de acceso
+    // Transición al Menú Principal del Cliente
     document.getElementById('datos-cliente-form').classList.add('oculto');
-    
-    // 2. Mostrar el menú principal
-    document.getElementById('menu-cliente').classList.remove('oculto');
-    document.getElementById('cliente-nombre-menu').textContent = clienteNombre;
-    
-    // Ocultar áreas de pedido y recibo
     document.getElementById('area-pedido').classList.add('oculto');
     document.getElementById('area-confirmar-recibido').classList.add('oculto');
-    
+    document.getElementById('menu-cliente').classList.remove('oculto');
+
+    // Implementación del saludo personalizado
+    document.getElementById('cliente-nombre-menu').textContent = clienteNombre;
+
     localStorage.setItem(STORAGE_CONSENT, 'true');
 }
 
-/**
- * Muestra el área de hacer pedidos (carrito).
- */
 function mostrarAreaPedido() {
     document.getElementById('menu-cliente').classList.add('oculto');
-    document.getElementById('area-confirmar-recibido').classList.add('oculto');
     document.getElementById('area-pedido').classList.remove('oculto');
 
-    // Cargar productos y configurar redención de puntos
-    cargarProductosCliente(); // Se debe asegurar que esta función esté completa
-    renderizarCarrito();
-
-    const puntosRedencionArea = document.getElementById('puntos-redencion-area');
-    if (programaPuntosActivo && puntosMaximos > 0) {
-        puntosRedencionArea.classList.remove('oculto');
-        document.getElementById('puntosACanjear').max = puntosMaximos;
-    } else {
-        puntosRedencionArea.classList.add('oculto');
-        document.getElementById('puntosACanjear').value = 0;
-    }
+    // Lógica para cargar productos y configurar redención de puntos...
+    // Las funciones cargarProductosCliente, renderizarCarrito, etc., deben estar completas
 }
 
-
-/**
- * Muestra el área para confirmar recibo de pedidos.
- * Requiere una nueva acción en el backend.
- */
-async function mostrarConfirmacionRecibido() {
+function mostrarConfirmacionRecibido() {
     document.getElementById('menu-cliente').classList.add('oculto');
-    document.getElementById('area-pedido').classList.add('oculto');
     document.getElementById('area-confirmar-recibido').classList.remove('oculto');
     
-    const telefono = document.getElementById("telefonoCliente").value.trim();
-    const listaDiv = document.getElementById('lista-pedidos-recibir');
-    listaDiv.innerHTML = 'Buscando pedidos confirmados y enviados...';
+    // Lógica para buscar pedidos pendientes de confirmar...
+}
 
-    const formData = new FormData();
-    formData.append('action', 'obtenerPedidosParaConfirmar'); // **NUEVA ACCIÓN REQUERIDA EN BACKEND**
-    formData.append('telefono', telefono);
+// ------------------------------------------------------------------
+// --- ADMINISTRADOR: FLUJO DE ACCESO ---
+// ------------------------------------------------------------------
 
-    try {
-        const response = await fetch(GOOGLE_SHEETS_API, { method: 'POST', body: formData });
-        const data = await response.json();
-        
-        if (data.success && data.pedidos.length > 0) {
-            let html = '<p>Haga clic en "Confirmar Recibido" en el pedido que ya tiene en sus manos.</p>';
-            
-            data.pedidos.forEach(p => {
-                 html += `
-                    <div class="producto-card" style="flex-direction: column; align-items: flex-start; margin-bottom: 15px;">
-                        <h4 style="color: #44e24e;">Pedido del ${p.fecha} - Estado: ${p.estado}</h4>
-                        <p>${p.detalle}</p>
-                        <p>Total: **$${p.total.toLocaleString('es-CO')} COP**</p>
-                        <button class="btn btn-whatsapp" style="width: 100%; margin-top: 10px;" onclick="confirmarPedido(${p.id})">
-                           ✅ Confirmar Recibido
-                        </button>
-                    </div>
-                `;
-            });
-            listaDiv.innerHTML = html;
-        } else {
-             listaDiv.innerHTML = 'No tiene pedidos con estado "Confirmado" o "Enviado" pendientes de recibir.';
-        }
-    } catch (error) {
-         listaDiv.innerHTML = 'Error de conexión al buscar pedidos.';
+function accederAdmin() {
+    mostrar('admin');
+    document.getElementById('admin-login').classList.remove('oculto');
+    document.getElementById('admin-panel-menu').classList.add('oculto');
+    document.getElementById('adminPin').value = '';
+}
+
+function iniciarSesionAdmin() {
+    const pin = document.getElementById('adminPin').value.trim();
+    if (pin === ADMIN_PIN_SECRETO) {
+        adminAcceso = true;
+        document.getElementById('admin-login').classList.add('oculto');
+        document.getElementById('admin-panel-menu').classList.remove('oculto');
+        mostrarMensaje('adminMessage', 'Acceso concedido. Bienvenido.', 'success');
+        mostrarAdminSection('configuracion'); // Mostrar configuración por defecto
+    } else {
+        mostrarMensaje('adminMessage', 'PIN incorrecto. Intente de nuevo.', 'error');
+        adminAcceso = false;
     }
 }
 
-// ... (El resto de funciones como cargarProductosCliente, cambiarCantidad, renderizarCarrito, enviarPedidoWhatsApp, etc. se mantienen) ...
-
-// **NUEVA FUNCIÓN REQUERIDA PARA EL BOTÓN DE CONFIRMACIÓN**
-function confirmarPedido(pedidoId) {
-    // Aquí se llamaría a una nueva acción en el backend: 'marcarPedidoComoRecibido'
-    alert(`Pedido ${pedidoId} marcado como Recibido. (Funcionalidad pendiente de implementar en Backend).`);
-    mostrarConfirmacionRecibido(); // Recarga la lista
+function adminLogout() {
+    adminAcceso = false;
+    mostrar('vista-inicial');
 }
 
-
-// ... (El resto del código de Administración, aunque simplificado, se mantiene) ...
+// ... (Resto de funciones de carrito, envío, y admin deben completarse) ...
+// (La función renderizarCarrito y otras dependen de productosDisponibles y carrito)
 
 </script>
 </body>

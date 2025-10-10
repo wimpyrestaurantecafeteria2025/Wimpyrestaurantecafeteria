@@ -1,21 +1,21 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Wimpy - v4</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>🍔☕ WimpyApp</title>
 <style>
-  :root{ --bg:#0b0c10; --card:#0f1114; --muted:#9aa0a6; --accent:#ff6b35; --text:#e6eef3; }
-  *{box-sizing:border-box;font-family:Inter,system-ui,Arial;}
-  body{margin:0; background:var(--bg); color:var(--text);}
-  header{display:flex;align-items:center;gap:12px;padding:14px;background:linear-gradient(90deg,#081018,#0d1114);}
+  :root{--bg:#0b0c10;--card:#0f1114;--muted:#9aa0a6;--accent:#ff6b35;--text:#e6eef3;}
+  *{box-sizing:border-box;font-family:Inter,system-ui,Arial;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+  header{display:flex;align-items:center;gap:12px;padding:14px;background:linear-gradient(90deg,#081018,#0d1114)}
   .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(180deg,#ff8a4c,#ff6b35);display:flex;align-items:center;justify-content:center;font-size:1.1rem}
-  .container{max-width:980px;margin:18px auto;padding:12px;}
-  .panel{background:var(--card);border:1px solid #151618;padding:16px;border-radius:12px;}
-  .row{display:flex;gap:12px;align-items:center;}
-  .col{display:flex;flex-direction:column;gap:8px;}
+  .container{max-width:980px;margin:18px auto;padding:12px}
+  .panel{background:var(--card);border:1px solid #151618;padding:16px;border-radius:12px}
+  .row{display:flex;gap:12px;align-items:center}
+  .col{display:flex;flex-direction:column;gap:8px}
   button{background:linear-gradient(90deg,var(--accent),#ff9a57);color:white;border:0;padding:10px 12px;border-radius:10px;cursor:pointer}
-  .btn-ghost{background:transparent;border:1px solid #222;color:var(--text)}
+  .btn-ghost{background:transparent;border:1px solid #222;color:var(--text);padding:8px;border-radius:8px}
   input,select,textarea{background:#0c0d0f;color:var(--text);border:1px solid #1b1c1e;padding:10px;border-radius:8px}
   .muted{color:var(--muted);font-size:0.92rem}
   .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
@@ -26,6 +26,7 @@
   .card{background:#0b0c0e;border:1px solid #151617;padding:10px;border-radius:10px}
   .small{padding:6px 8px;font-size:0.9rem}
   footer{margin-top:18px;text-align:center;color:var(--muted);font-size:0.9rem}
+  .hidden{display:none}
   @media (max-width:800px){ .grid.cols-3{grid-template-columns:repeat(1,1fr)} .row{flex-direction:column;align-items:stretch} }
 </style>
 </head>
@@ -33,7 +34,7 @@
   <header>
     <div class="logo">🍔☕</div>
     <div>
-      <h2 style="margin:0">Wimpy - v4</h2>
+      <h2 style="margin:0">WimpyApp</h2>
       <div class="muted">Pedidos • Fidelización • Facturación</div>
     </div>
   </header>
@@ -46,16 +47,15 @@
         <div class="tab" data-view="admin">Administrador</div>
       </div>
 
-      <!-- VISTAS -->
       <div id="viewContainer">
         <!-- INICIO -->
         <div id="inicioView">
-          <h3>Bienvenido a Wimpy</h3>
-          <p class="muted">Selecciona Cliente o Administrador. El flujo OTP es local y gratuito.</p>
+          <h3>Bienvenido a WimpyApp</h3>
+          <p class="muted">Selecciona Cliente o Administrador para comenzar.</p>
         </div>
 
         <!-- CLIENTE -->
-        <div id="clienteView" style="display:none;">
+        <div id="clienteView" class="hidden">
           <div class="grid" style="gap:12px">
             <div class="card">
               <h4>Acceso Cliente</h4>
@@ -63,18 +63,22 @@
                 <input id="cliTelefono" placeholder="Teléfono (ej: 3118336562)" />
                 <button id="btnGenerarOtp">Generar PIN (gratis)</button>
               </div>
-              <div id="otpArea" style="margin-top:10px;display:none">
+
+              <div id="otpArea" class="hidden" style="margin-top:10px">
                 <div class="muted">PIN generado (válido 3 minutos):</div>
                 <div style="font-size:1.6rem;font-weight:700" id="otpValor"></div>
+
                 <div style="margin-top:8px;display:flex;gap:8px">
+                  <input id="pinInput" placeholder="Ingresa el PIN" style="width:160px" />
                   <button id="btnIngresarConOtp">Ingresar con PIN</button>
                   <button id="btnWaVerify" class="btn-ghost">Enviar PIN por mi WhatsApp (opcional)</button>
                 </div>
+
                 <div class="muted" style="margin-top:8px">Si pulsas "Enviar PIN por mi WhatsApp" se abrirá tu WhatsApp con un mensaje prellenado que tú enviarás —esto prueba que el número es tuyo.</div>
               </div>
             </div>
 
-            <div class="card" id="clienteMenu" style="display:none">
+            <div id="clienteMenu" class="card hidden">
               <h4>Cliente: <span id="clienteNombreShow"></span></h4>
               <div class="row" style="justify-content:space-between;align-items:center">
                 <div class="muted">Puntos disponibles: <strong id="clientePuntos">0</strong></div>
@@ -86,10 +90,10 @@
               <div style="margin-top:12px">
                 <div style="display:flex;gap:8px">
                   <button id="clientePedidosBtn" class="small">Pedidos</button>
-                  <button id="clienteAcuseBtn" class="small">Acuse de recibo</button>
+                  <button id="clienteConfirmBtn" class="small">Confirmar entrega</button>
                 </div>
 
-                <div id="clientePedidosView" style="margin-top:12px;display:none">
+                <div id="clientePedidosView" class="hidden" style="margin-top:12px">
                   <div class="row" style="justify-content:space-between;align-items:center">
                     <h5>Menú</h5>
                     <div class="row">
@@ -107,15 +111,15 @@
                       <div class="muted">Total: <strong id="totalCliente">$0</strong></div>
                       <div style="display:flex;gap:8px">
                         <button id="btnAplicarPuntos" class="btn-ghost">Usar mis puntos</button>
-                        <button id="btnEnviarPedido" class="btn">Enviar pedido</button>
+                        <button id="btnEnviarPedido" class="btn">Confirmar compra</button>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div id="clienteAcuseView" style="margin-top:12px;display:none">
-                  <h5>Acuse de recibo / Confirmar entrega</h5>
-                  <div class="muted">Pedidos aprobados a tu teléfono:</div>
+                <div id="clienteConfirmView" class="hidden" style="margin-top:12px">
+                  <h5>Confirmar entrega</h5>
+                  <div class="muted">Selecciona el pedido que recibiste:</div>
                   <div id="pedidosPendientesCliente" style="margin-top:8px"></div>
                 </div>
               </div>
@@ -124,7 +128,7 @@
         </div>
 
         <!-- ADMIN -->
-        <div id="adminView" style="display:none">
+        <div id="adminView" class="hidden">
           <div class="grid" style="gap:12px">
             <div class="card">
               <h4>Acceso Administrador</h4>
@@ -133,9 +137,10 @@
                 <button id="btnAdminLogin">Ingresar</button>
               </div>
               <div class="muted" style="margin-top:8px">PIN por defecto: <strong>1995</strong></div>
+              <div id="adminStatus" class="muted" style="margin-top:6px"></div>
             </div>
 
-            <div id="adminPanel" style="display:none">
+            <div id="adminPanel" class="hidden">
               <div class="card">
                 <h4>Admin Panel</h4>
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -143,7 +148,7 @@
                   <button class="tab small" data-adminview="productos">Productos</button>
                   <button class="tab small" data-adminview="clientes">Clientes</button>
                   <button class="tab small" data-adminview="pedidos">Pedidos</button>
-                  <button class="tab small" data-adminview="facturacion">Facturación</button>
+                  <button class="tab small" data-adminview="facturacion">Cuentas de cobro</button>
                   <button class="tab small" data-adminview="fidelizacion">Fidelización</button>
                   <button class="tab small" data-adminview="configuracion">Configuración</button>
                   <button class="tab small" data-adminview="backups">Backups</button>
@@ -151,7 +156,7 @@
 
                 <div id="adminViewsArea" style="margin-top:12px">
                   <!-- Dashboard -->
-                  <div id="admin_dashboard" style="display:none">
+                  <div id="admin_dashboard" class="hidden">
                     <h5>Dashboard</h5>
                     <div class="row" style="gap:12px;margin-top:8px">
                       <div class="card">Pedidos totales: <div id="stat_total">0</div></div>
@@ -162,18 +167,19 @@
                   </div>
 
                   <!-- Productos -->
-                  <div id="admin_productos" style="display:none">
+                  <div id="admin_productos" class="hidden">
                     <h5>Productos</h5>
                     <div style="display:flex;gap:8px;margin-top:8px">
                       <input id="prodNombre" placeholder="Nombre producto"/>
                       <input id="prodPrecio" placeholder="Precio entero"/>
+                      <input id="prodCategoria" placeholder="Categoría (ej: Cafetería)"/>
                       <button id="btnAddProd">Agregar</button>
                     </div>
                     <div id="productosAdminList" style="margin-top:10px"></div>
                   </div>
 
                   <!-- Clientes -->
-                  <div id="admin_clientes" style="display:none">
+                  <div id="admin_clientes" class="hidden">
                     <h5>Clientes</h5>
                     <div style="display:flex;gap:8px;margin-top:8px">
                       <input id="cliNombreAdmin" placeholder="Nombre"/>
@@ -185,7 +191,7 @@
                   </div>
 
                   <!-- Pedidos -->
-                  <div id="admin_pedidos" style="display:none">
+                  <div id="admin_pedidos" class="hidden">
                     <h5>Pedidos</h5>
                     <div style="display:flex;gap:8px;margin-top:8px">
                       <select id="filtroPedidos">
@@ -193,6 +199,7 @@
                         <option value="pendiente">Pendiente</option>
                         <option value="aprobado">Aprobado</option>
                         <option value="entregado">Entregado</option>
+                        <option value="cancelado">Cancelado</option>
                       </select>
                       <button id="btnRefreshHist">Refrescar</button>
                     </div>
@@ -200,19 +207,24 @@
                   </div>
 
                   <!-- Facturación -->
-                  <div id="admin_facturacion" style="display:none">
-                    <h5>Facturación y reportes</h5>
+                  <div id="admin_facturacion" class="hidden">
+                    <h5>Cuentas de cobro</h5>
                     <div style="display:flex;gap:8px;margin-top:8px">
                       <input id="factMes" type="month" />
-                      <button id="btnGenPdf">Generar PDF resumen</button>
-                      <button id="btnGenExcel">Generar Excel detalle por empleado</button>
+                      <button id="btnGenPdfMensual">Generar PDF mensual (Total)</button>
+                      <button id="btnGenExcelMensual">Generar Excel detalle por empleado</button>
                     </div>
                     <div id="factLinks" style="margin-top:8px"></div>
+                    <div style="margin-top:12px">
+                      <h6>Generar cuenta individual:</h6>
+                      <input id="invoiceTimestamp" placeholder="Timestamp pedido" />
+                      <button id="btnGenInvoice">Generar cuenta (pedido)</button>
+                    </div>
                   </div>
 
                   <!-- Fidelización -->
-                  <div id="admin_fidelizacion" style="display:none">
-                    <h5>Fidelización</h5>
+                  <div id="admin_fidelizacion" class="hidden">
+                    <h5>Fidelización y Promociones</h5>
                     <div class="muted">Promociones activas</div>
                     <div style="display:flex;gap:8px;margin-top:8px">
                       <input id="promoNombre" placeholder="Nombre promo (ej: Viernes de Café)"/>
@@ -221,23 +233,26 @@
                       <button id="btnAddPromo">Agregar promo</button>
                     </div>
                     <div id="promosList" style="margin-top:10px"></div>
-                    <div style="margin-top:12px" class="muted">Nota: Bono cumpleaños se aplica automáticamente si la fecha de nacimiento coincide.</div>
+                    <div style="margin-top:12px" class="muted">Bono cumpleaños: aplica automáticamente.</div>
                   </div>
 
                   <!-- Configuración -->
-                  <div id="admin_configuracion" style="display:none">
+                  <div id="admin_configuracion" class="hidden">
                     <h5>Configuración Wimpy</h5>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
                       <input id="cfgNumeroWimpy" placeholder="Número WhatsApp Wimpy (ej: 573118336562)"/>
                       <input id="cfgNombreW" placeholder="Nombre empresa (Wimpy)"/>
-                      <input id="cfgNIT" placeholder="NIT"/>
+                      <input id="cfgNIT" placeholder="NIT Wimpy"/>
+                      <input id="cfgEmpresaNombre" placeholder="Empresa contratante (nombre)"/>
+                      <input id="cfgEmpresaNIT" placeholder="NIT empresa"/>
+                      <input id="cfgCodigoEmpresa" placeholder="Código empresa (2 dígitos)"/>
                       <button id="btnGuardarCfg">Guardar</button>
                       <button id="btnCargarCfg" class="btn-ghost">Cargar actual</button>
                     </div>
                   </div>
 
                   <!-- Backups -->
-                  <div id="admin_backups" style="display:none">
+                  <div id="admin_backups" class="hidden">
                     <h5>Backups</h5>
                     <div style="display:flex;gap:8px;margin-top:8px">
                       <button id="btnBackupNow">Crear backup ahora</button>
@@ -254,110 +269,112 @@
         </div>
 
       </div>
-
     </div>
   </main>
 
-  <footer>Wimpy • App v4 — Hecho para administración empresarial</footer>
+  <footer>WimpyApp • Hecho para administración empresarial</footer>
 
 <script>
-/* -------- CONFIG -------- */
+/* ================== CONFIG ================== */
 const GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbwvbXwdh3xtkbHWsfwDTJ7BNU5A2fwIAWrGZ40j8w2UyzJeKh_lfQ6zcasIDqPOoSSYPQ/exec';
 const ADMIN_PIN = '1995';
-/* ------------------------ */
+/* ============================================ */
 
 let productos = [], clientes = [], historial = [], promos = [];
-let clienteSesion = null; // {telefono, nombre}
-let carrito = []; // {id,nombre,precio,cantidad}
+let clienteSesion = null;
+let carrito = [];
 let puntosAplicados = 0;
+let NUMERO_WIMPY = '573118336562';
 
-// util
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
-function esc(t){ return String(t||''); }
-async function getJSON(q){ const r = await fetch(q,{cache:'no-store'}); return await r.json().catch(()=>({})); }
+const esc = t => String(t||'');
+async function getJSON(q){
+  try{
+    const r = await fetch(q, {cache:'no-store'});
+    return await r.json();
+  } catch(e){ console.error('fetch error',e); return null; }
+}
 
-// TABS
+/* ---------- Tabs ---------- */
 $$('.tab[data-view]').forEach(t=>{
   t.addEventListener('click', ()=>{
     $$('.tab[data-view]').forEach(x=>x.classList.remove('active'));
     t.classList.add('active');
     const view = t.dataset.view;
-    $('#inicioView').style.display = view==='inicio' ? '' : 'none';
-    $('#clienteView').style.display = view==='cliente' ? '' : 'none';
-    $('#adminView').style.display = view==='admin' ? '' : 'none';
+    $('#inicioView').classList.toggle('hidden', view!=='inicio');
+    $('#clienteView').classList.toggle('hidden', view!=='cliente');
+    $('#adminView').classList.toggle('hidden', view!=='admin');
   });
 });
 
-// ---------- CLIENTE: OTP ----------
+/* ---------- CLIENTE: OTP ---------- */
 $('#btnGenerarOtp').addEventListener('click', async ()=>{
   const tel = $('#cliTelefono').value.trim();
   if (!tel) return alert('Ingresa teléfono');
   const res = await getJSON(`${GOOGLE_SHEETS_API}?action=generarOTP&telefono=${encodeURIComponent(tel)}`);
   if (res && res.success){
-    $('#otpArea').style.display = '';
+    $('#otpArea').classList.remove('hidden');
     $('#otpValor').textContent = res.pin;
-    // guardar temporal en frontend para expiración visual
-    setTimeout(()=>{ $('#otpArea').style.display='none'; $('#otpValor').textContent=''; }, 180000);
-    // botón para enviar por WhatsApp (usuario envía desde su WA)
+    $('#pinInput').value = '';
+    // hide after 3 minutes
+    setTimeout(()=>{ $('#otpArea').classList.add('hidden'); $('#otpValor').textContent=''; }, 180000);
     $('#btnWaVerify').onclick = ()=>{
-      const numeroW = window.NUMERO_WIMPY || '573118336562';
+      // open wa.me to NUMERO_WIMPY (from config if available)
+      const numero = window.NUMERO_WIMPY || NUMERO_WIMPY;
       const text = `WIMPY OTP REQUEST: ${res.pin}`;
-      window.open(`https://wa.me/${numeroW}?text=${encodeURIComponent(text)}`,'_blank');
+      window.open(`https://wa.me/${numero}?text=${encodeURIComponent(text)}`, '_blank');
     };
-  } else {
-    alert('Error generando PIN');
-  }
+  } else alert('Error generando PIN');
 });
 
 $('#btnIngresarConOtp').addEventListener('click', async ()=>{
   const tel = $('#cliTelefono').value.trim();
-  const pin = $('#otpValor').textContent.trim();
+  const pin = $('#pinInput').value.trim();
   if (!tel || !pin) return alert('Teléfono y PIN requeridos');
   const res = await getJSON(`${GOOGLE_SHEETS_API}?action=validarOTP&telefono=${encodeURIComponent(tel)}&pin=${encodeURIComponent(pin)}`);
   if (res && res.success){
     clienteSesion = { telefono: tel, nombre: res.nombre || ('Cliente ' + tel) };
     $('#clienteNombreShow').textContent = clienteSesion.nombre;
     $('#clientePuntos').textContent = res.saldo || 0;
-    $('#clienteMenu').style.display = '';
-    $('#otpArea').style.display = 'none';
-    $('#otpValor').textContent = '';
-    showClientePedidos();
+    $('#clienteMenu').classList.remove('hidden');
+    $('#otpArea').classList.add('hidden');
+    $('#pinInput').value = '';
+    showClientePedidos(); // default to pedidos view
   } else {
-    alert(res.message || 'PIN inválido o expirado');
+    alert(res && res.message ? res.message : 'PIN inválido o expirado');
   }
 });
 
 $('#btnCerrarSesion').addEventListener('click', ()=>{
-  clienteSesion = null;
-  carrito = [];
-  $('#clienteMenu').style.display = 'none';
+  clienteSesion = null; carrito = []; $('#clienteMenu').classList.add('hidden');
 });
 
-// CLIENTE: pedidos / carrito
-$('#clientePedidosBtn').addEventListener('click', ()=>{ $('#clienteAcuseView').style.display='none'; $('#clientePedidosView').style.display=''; renderProductosLista(); });
-$('#clienteAcuseBtn').addEventListener('click', ()=>{ $('#clientePedidosView').style.display='none'; $('#clienteAcuseView').style.display=''; cargarPedidosCliente(); });
+/* ---------- CLIENTE: pedidos / carrito ---------- */
+$('#clientePedidosBtn').addEventListener('click', ()=>{ $('#clienteConfirmView').classList.add('hidden'); $('#clientePedidosView').classList.remove('hidden'); renderProductosLista(); });
+$('#clienteConfirmBtn').addEventListener('click', ()=>{ $('#clientePedidosView').classList.add('hidden'); $('#clienteConfirmView').classList.remove('hidden'); cargarPedidosCliente(); });
 
 $('#refreshProducts').addEventListener('click', async ()=>{ await loadProductos(); renderProductosLista(); });
 
-async function loadProductos(){ const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerProductos`); if (r && r.success) productos = r.productos || []; else productos=[]; }
-async function loadClientes(){ const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerClientes`); if (r && r.success) clientes = r.clientes || []; }
-async function loadHistorial(){ const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerHistorial`); if (r && r.success) historial = r.historial || []; }
+async function loadProductos(){ const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerProductos`); productos = (r && r.success) ? r.productos : []; }
+async function loadClientes(){ const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerClientes`); clientes = (r && r.success) ? r.clientes : []; }
+async function loadHistorial(){ const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerHistorial`); historial = (r && r.success) ? r.historial : []; }
+async function loadPromos(){ const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerPromos`); promos = (r && r.success) ? r.promos : []; }
 
 async function renderProductosLista(){
   await loadProductos();
   const q = $('#searchProductosCliente').value.trim().toLowerCase();
   const node = $('#productosListCliente'); node.innerHTML = '';
-  const lista = productos.filter(p => (p.activo+'').toLowerCase().indexOf('si')!==-1 || p.activo===true);
-  const fil = lista.filter(p => !q || (p.nombre||'').toLowerCase().includes(q));
+  const lista = productos.filter(p => (p.activo === 'SI' || p.activo === true || p.activo === 'TRUE'));
+  const fil = lista.filter(p => !q || (p.nombreProducto||'').toLowerCase().includes(q));
   if (!fil.length){ node.innerHTML = '<div class="muted">No hay productos</div>'; return; }
   fil.forEach(p=>{
     const el = document.createElement('div'); el.className='card';
     el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-weight:700">${esc(p.nombre)}</div><div class="muted">$ ${Number(p.precio).toLocaleString('es-CO')}</div></div>
+      <div><div style="font-weight:700">${esc(p.nombreProducto)}</div><div class="muted">$ ${Number(p.precio).toLocaleString('es-CO')}</div></div>
       <div style="display:flex;flex-direction:column;gap:6px">
-        <input type="number" min="1" value="1" style="width:80px;padding:6px;border-radius:6px;background:#0c0d0f;color:var(--text)" data-id="${p.id}" />
-        <button data-add="${p.id}" class="small">Añadir</button>
+        <input type="number" min="1" value="1" style="width:80px;padding:6px;border-radius:6px;background:#0c0d0f;color:var(--text)" data-id="${p.IDProducto}" />
+        <button data-add="${p.IDProducto}" class="small">Añadir</button>
       </div>
     </div>`;
     node.appendChild(el);
@@ -367,16 +384,16 @@ async function renderProductosLista(){
       const id = b.dataset.add;
       const input = b.parentElement.querySelector('input');
       const qty = parseInt(input.value,10) || 1;
-      const prod = productos.find(x=> String(x.id)===String(id));
+      const prod = productos.find(x=> String(x.IDProducto)===String(id));
       if (prod) addToCart(prod, qty);
     });
   });
 }
 
 function addToCart(prod, qty){
-  const found = carrito.find(i=> String(i.id)===String(prod.id));
+  const found = carrito.find(i=> String(i.id)===String(prod.IDProducto));
   if (found) found.cantidad += qty;
-  else carrito.push({ id:prod.id, nombre:prod.nombre, precio:parseInt(prod.precio,10)||0, cantidad:qty });
+  else carrito.push({ id:prod.IDProducto, nombre:prod.nombreProducto, precio:parseInt(prod.precio,10)||0, cantidad:qty });
   renderCarrito();
 }
 
@@ -389,7 +406,6 @@ function renderCarrito(){
     const el = document.createElement('div'); el.style.display='flex'; el.style.justifyContent='space-between'; el.style.marginBottom='8px';
     el.innerHTML = `<div>${esc(it.nombre)} <span class="muted">x${it.cantidad}</span></div><div>$${Number(it.precio*it.cantidad).toLocaleString('es-CO')}</div>`;
     node.appendChild(el);
-    const ctr = document.createElement('div'); ctr.style.display='flex'; ctr.style.gap='6px'; ctr.style.marginBottom='8px';
   });
   $('#totalCliente').textContent = `$${Number(total).toLocaleString('es-CO')}`;
 }
@@ -411,7 +427,6 @@ $('#btnAplicarPuntos').addEventListener('click', async ()=>{
 $('#btnEnviarPedido').addEventListener('click', async ()=>{
   if (!clienteSesion) return alert('Ingresa primero');
   if (!carrito.length) return alert('Carrito vacío');
-  // preparar detalle JSON
   const detalle = carrito.map(i=> ({ id:i.id, nombre:i.nombre, precio:i.precio, cantidad:i.cantidad }));
   const total = carrito.reduce((s,i)=> s + (i.precio*i.cantidad), 0);
   const payload = `${GOOGLE_SHEETS_API}?action=registrarPedido&telefono=${encodeURIComponent(clienteSesion.telefono)}&nombre=${encodeURIComponent(clienteSesion.nombre||'')}&detalleJSON=${encodeURIComponent(JSON.stringify(detalle))}&total=${encodeURIComponent(total)}&puntosAplicados=${encodeURIComponent(puntosAplicados||0)}`;
@@ -424,7 +439,7 @@ $('#btnEnviarPedido').addEventListener('click', async ()=>{
   } else alert('Error registrando pedido');
 });
 
-// cliente: ver pedidos pendientes aprobados para confirmar entrega
+/* ---------- CLIENTE: Confirmar entrega ---------- */
 async function cargarPedidosCliente(){
   await loadHistorial();
   const node = $('#pedidosPendientesCliente'); node.innerHTML = '';
@@ -434,10 +449,10 @@ async function cargarPedidosCliente(){
   lista.forEach(h=>{
     const el = document.createElement('div'); el.className='card';
     el.innerHTML = `<div style="display:flex;justify-content:space-between">
-      <div><div style="font-weight:700">${esc(h.detalleResumen || h.detalle)}</div><div class="muted">${esc(h.fecha)} ${esc(h.hora)}</div></div>
+      <div><div style="font-weight:700">${esc(h.detalleResumen || h.detalle)}</div><div class="muted">${esc(h.fecha)} • ${esc(h.hora)}</div></div>
       <div style="display:flex;flex-direction:column;gap:6px">
         <div class="muted">Total: $${Number(h.total).toLocaleString('es-CO')}</div>
-        ${h.estado==='aprobado' ? `<button data-confirm="${h.timestamp}" class="small">Confirmar recepción</button>` : `<div class="muted">Estado: ${h.estado}</div>`}
+        ${h.estado!=='entregado' ? `<button data-confirm="${h.timestamp}" class="small">Confirmar entrega</button>` : `<div class="muted">Estado: ${h.estado}</div>`}
       </div>
     </div>`;
     node.appendChild(el);
@@ -450,7 +465,6 @@ async function cargarPedidosCliente(){
       if (res && res.success){
         alert('Entrega confirmada. Gracias.');
         await loadHistorial(); cargarPedidosCliente();
-        // actualizar puntos en pantalla
         const saldo = await getJSON(`${GOOGLE_SHEETS_API}?action=getSaldoPuntos&telefono=${encodeURIComponent(clienteSesion.telefono)}`);
         $('#clientePuntos').textContent = saldo.saldo || 0;
       } else alert('Error confirmando entrega');
@@ -458,17 +472,25 @@ async function cargarPedidosCliente(){
   });
 }
 
-// ---------- ADMIN ----------
-$('#btnAdminLogin').addEventListener('click', ()=>{
+/* ---------- ADMIN ---------- */
+$('#btnAdminLogin').addEventListener('click', async ()=>{
   const pin = $('#adminPin').value.trim();
-  if (pin === ADMIN_PIN){ $('#adminPanel').style.display=''; alert('Acceso admin concedido'); $('#admin_dashboard').style.display=''; loadAllAdmin(); }
-  else alert('PIN incorrecto');
+  if (pin === ADMIN_PIN){
+    $('#adminPin').value = '';
+    $('#adminStatus').textContent = 'Sesión activa como administrador ✅';
+    $('#adminPanel').classList.remove('hidden');
+    $('#admin_dashboard').classList.remove('hidden');
+    await loadAllAdmin();
+  } else alert('PIN incorrecto');
 });
+
+async function loadAllAdmin(){ await loadProductos(); await loadClientes(); await loadHistorial(); await loadPromos(); renderAdminProductos(); renderAdminClientes(); renderAdminPedidos(); renderPromos(); renderStats(); }
 
 $$('.tab.small[data-adminview]').forEach(b=>{
   b.addEventListener('click', ()=>{
     const v = b.dataset.adminview;
-    ['dashboard','productos','clientes','pedidos','facturacion','fidelizacion','configuracion','backups'].forEach(x=> $('#admin_'+x).style.display = x===v ? '' : 'none');
+    ['dashboard','productos','clientes','pedidos','facturacion','fidelizacion','configuracion','backups'].forEach(x=> $('#admin_'+x).classList.add('hidden'));
+    $('#admin_'+v).classList.remove('hidden');
     if (v==='productos') renderAdminProductos();
     if (v==='clientes') renderAdminClientes();
     if (v==='pedidos') renderAdminPedidos();
@@ -478,14 +500,14 @@ $$('.tab.small[data-adminview]').forEach(b=>{
   });
 });
 
-async function loadAllAdmin(){ await loadProductos(); await loadClientes(); await loadHistorial(); await loadPromos(); renderAdminProductos(); renderAdminClientes(); renderAdminPedidos(); renderStats(); }
-
+/* Productos admin */
 $('#btnAddProd').addEventListener('click', async ()=>{
   const nombre = $('#prodNombre').value.trim();
   const precio = parseInt($('#prodPrecio').value.trim(),10);
+  const categoria = $('#prodCategoria').value.trim();
   if (!nombre || isNaN(precio)) return alert('Nombre y precio (entero)');
-  const res = await getJSON(`${GOOGLE_SHEETS_API}?action=agregarProducto&nombre=${encodeURIComponent(nombre)}&precio=${encodeURIComponent(precio)}`);
-  if (res && res.success){ $('#prodNombre').value=''; $('#prodPrecio').value=''; await loadProductos(); renderAdminProductos(); } else alert('Error');
+  const res = await getJSON(`${GOOGLE_SHEETS_API}?action=agregarProducto&nombre=${encodeURIComponent(nombre)}&precio=${encodeURIComponent(precio)}&categoria=${encodeURIComponent(categoria)}`);
+  if (res && res.success){ $('#prodNombre').value=''; $('#prodPrecio').value=''; $('#prodCategoria').value=''; await loadProductos(); renderAdminProductos(); } else alert('Error');
 });
 async function renderAdminProductos(){
   await loadProductos();
@@ -493,14 +515,19 @@ async function renderAdminProductos(){
   productos.forEach(p=>{
     const el = document.createElement('div'); el.className='card';
     el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-weight:700">${esc(p.nombre)}</div><div class="muted">$${Number(p.precio).toLocaleString('es-CO')}</div></div>
-      <div><button data-del="${p.id}" class="btn-ghost small">Eliminar</button></div>
+      <div><div style="font-weight:700">${esc(p.nombreProducto)}</div><div class="muted">C: ${esc(p.categoria)} • $${Number(p.precio).toLocaleString('es-CO')}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button data-edit="${p.IDProducto}" class="btn-ghost small">Editar</button>
+        <button data-del="${p.IDProducto}" class="btn-ghost small">Eliminar</button>
+      </div>
     </div>`;
     node.appendChild(el);
   });
-  node.querySelectorAll('button[data-del]').forEach(b=> b.addEventListener('click', async ()=>{ if(!confirm('Eliminar producto?')) return; const id=b.dataset.del; const res = await getJSON(`${GOOGLE_SHEETS_API}?action=eliminarProducto&id=${encodeURIComponent(id)}`); if (res && res.success){ await loadProductos(); renderAdminProductos(); } else alert('Error'); }));
+  node.querySelectorAll('button[data-del]').forEach(b=> b.addEventListener('click', async ()=>{ if(!confirm('Eliminar producto?')) return; const id=b.dataset.del; const res=await getJSON(`${GOOGLE_SHEETS_API}?action=eliminarProducto&id=${encodeURIComponent(id)}`); if (res && res.success){ await loadProductos(); renderAdminProductos(); } else alert('Error'); }));
+  node.querySelectorAll('button[data-edit]').forEach(b=> b.addEventListener('click', async ()=>{ const id=b.dataset.edit; const p=productos.find(x=>String(x.IDProducto)===String(id)); if(!p) return; const nuevo = prompt('Nuevo precio entero para ' + p.nombreProducto, p.precio); if (nuevo===null) return; const price = parseInt(nuevo,10); if (isNaN(price)) return alert('Precio inválido'); const res = await getJSON(`${GOOGLE_SHEETS_API}?action=editarProducto&id=${encodeURIComponent(id)}&precio=${encodeURIComponent(price)}`); if (res && res.success) await loadProductos(), renderAdminProductos(); else alert('Error'); }));
 }
 
+/* Clientes admin */
 $('#btnAddClienteAdmin').addEventListener('click', async ()=>{
   const nombre = $('#cliNombreAdmin').value.trim();
   const telefono = $('#cliTelefonoAdmin').value.trim();
@@ -516,11 +543,13 @@ async function renderAdminClientes(){
     const el = document.createElement('div'); el.className='card';
     el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
       <div><div style="font-weight:700">${esc(c.nombre)}</div><div class="muted">${esc(c.telefono)}</div></div>
+      <div><div class="muted">${esc(c.email||'')}</div></div>
     </div>`;
     node.appendChild(el);
   });
 }
 
+/* Pedidos admin */
 $('#btnRefreshHist').addEventListener('click', renderAdminPedidos);
 async function renderAdminPedidos(){
   await loadHistorial();
@@ -531,7 +560,7 @@ async function renderAdminPedidos(){
   lista.slice().reverse().forEach(h=>{
     const el = document.createElement('div'); el.className='card';
     el.innerHTML = `<div style="display:flex;justify-content:space-between">
-      <div><div style="font-weight:700">${esc(h.nombre)} • ${esc(h.telefono)}</div><div class="muted">${esc(h.fecha)} ${esc(h.hora)}</div><div style="margin-top:6px">${esc(h.detalleResumen || h.detalle)}</div></div>
+      <div><div style="font-weight:700">${esc(h.nombre)} • ${esc(h.telefono)}</div><div class="muted">${esc(h.fecha)} • ${esc(h.hora)}</div><div style="margin-top:6px">${esc(h.detalleResumen || h.detalle)}</div></div>
       <div style="text-align:right">
         <div class="muted">Total: $${Number(h.total).toLocaleString('es-CO')}</div>
         <div style="margin-top:8px">
@@ -548,44 +577,54 @@ async function renderAdminPedidos(){
   node.querySelectorAll('button[data-invoice]').forEach(b=> b.addEventListener('click', async ()=>{ const ts=b.dataset.invoice; const res=await getJSON(`${GOOGLE_SHEETS_API}?action=generarCuentaCobro&timestamp=${encodeURIComponent(ts)}&enviarEmail=`); if(res && res.success) alert('Cuenta generada: '+(res.driveUrl||res.driveId)); else alert('Error'); }));
 }
 
-$('#btnGenPdf').addEventListener('click', async ()=>{ const mes = $('#factMes').value; if(!mes) return alert('Selecciona mes'); const res=await getJSON(`${GOOGLE_SHEETS_API}?action=generarCuentaCobroMensual&mes=${encodeURIComponent(mes)}`); if(res && res.success) alert('PDF generado: '+(res.driveUrl||res.driveId)); else alert('Error'); });
-$('#btnGenExcel').addEventListener('click', async ()=>{ const mes = $('#factMes').value; if(!mes) return alert('Selecciona mes'); const res=await getJSON(`${GOOGLE_SHEETS_API}?action=generarExcelDetallePorEmpleado&mes=${encodeURIComponent(mes)}`); if(res && res.success) alert('Excel: '+(res.driveUrl||res.driveId)); else alert('Error'); });
+/* Facturación admin */
+$('#btnGenPdfMensual').addEventListener('click', async ()=>{ const mes = $('#factMes').value; if(!mes) return alert('Selecciona mes'); const res=await getJSON(`${GOOGLE_SHEETS_API}?action=generarCuentaCobroMensual&mes=${encodeURIComponent(mes)}`); if(res && res.success) alert('PDF generado: '+(res.driveUrl||res.driveId)); else alert('Error'); });
+$('#btnGenExcelMensual').addEventListener('click', async ()=>{ const mes = $('#factMes').value; if(!mes) return alert('Selecciona mes'); const res=await getJSON(`${GOOGLE_SHEETS_API}?action=generarExcelDetallePorEmpleado&mes=${encodeURIComponent(mes)}`); if(res && res.success) alert('Excel: '+(res.driveUrl||res.driveId)); else alert('Error'); });
+$('#btnGenInvoice').addEventListener('click', async ()=>{ const ts = $('#invoiceTimestamp').value.trim(); if(!ts) return alert('Ingresa timestamp'); const res = await getJSON(`${GOOGLE_SHEETS_API}?action=generarCuentaCobro&timestamp=${encodeURIComponent(ts)}&enviarEmail=`); if(res && res.success) alert('Cuenta generada: '+(res.driveUrl||res.driveId)); else alert('Error'); });
 
-// promos
+/* Promos admin */
 $('#btnAddPromo').addEventListener('click', async ()=>{
   const nombre = $('#promoNombre').value.trim(), filtro = $('#promoFiltro').value.trim(), mult = parseFloat($('#promoMult').value.trim());
   if(!nombre || !filtro || isNaN(mult)) return alert('Completa datos');
   const res = await getJSON(`${GOOGLE_SHEETS_API}?action=agregarPromo&nombre=${encodeURIComponent(nombre)}&filtro=${encodeURIComponent(filtro)}&mult=${encodeURIComponent(mult)}`);
   if(res && res.success){ $('#promoNombre').value=''; $('#promoFiltro').value=''; $('#promoMult').value=''; await loadPromos(); renderPromos(); } else alert('Error');
 });
-async function loadPromos(){ const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerPromos`); promos = r && r.success ? r.promos||[] : []; }
 async function renderPromos(){ await loadPromos(); const node = $('#promosList'); node.innerHTML = ''; if(!promos.length) { node.innerHTML='<div class="muted">No hay promos</div>'; return; } promos.forEach(p=>{ const el=document.createElement('div'); el.className='card'; el.innerHTML=`<div style="display:flex;justify-content:space-between"><div><div style="font-weight:700">${esc(p.nombre)}</div><div class="muted">Filtro: ${esc(p.filtro)} • x${esc(p.mult)}</div></div><div><button data-delpromo="${p.id}" class="btn-ghost small">Eliminar</button></div></div>`; node.appendChild(el); }); node.querySelectorAll('button[data-delpromo]').forEach(b=> b.addEventListener('click', async ()=>{ if(!confirm('Eliminar promo?')) return; const id=b.dataset.delpromo; const res=await getJSON(`${GOOGLE_SHEETS_API}?action=eliminarPromo&id=${encodeURIComponent(id)}`); if(res && res.success) await loadPromos(), renderPromos(); else alert('Error'); })); }
 
-// configuracion
+/* Configuración */
 $('#btnGuardarCfg').addEventListener('click', async ()=>{
   const numero = $('#cfgNumeroWimpy').value.trim(), nombre = $('#cfgNombreW').value.trim(), nit = $('#cfgNIT').value.trim();
-  const data = { numero: numero, nombre:nombre, nit:nit };
+  const empNombre = $('#cfgEmpresaNombre').value.trim(), empNit = $('#cfgEmpresaNIT').value.trim(), empCodigo = $('#cfgCodigoEmpresa').value.trim();
+  const data = { numero: numero, nombre:nombre, nit:nit, empresaNombre: empNombre, empresaNit: empNit, empresaCodigo: empCodigo };
   const res = await getJSON(`${GOOGLE_SHEETS_API}?action=guardarWimpy&data=${encodeURIComponent(JSON.stringify(data))}`);
   if(res && res.success) alert('Guardado'); else alert('Error');
 });
 $('#btnCargarCfg').addEventListener('click', loadConfig);
-async function loadConfig(){ const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerConfiguracion`); if(r && r.success){ $('#cfgNumeroWimpy').value = r.numero || ''; $('#cfgNombreW').value = (r.wimpy && r.wimpy.nombre) || ''; $('#cfgNIT').value = (r.wimpy && r.wimpy.nit) || ''; window.NUMERO_WIMPY = r.numero || window.NUMERO_WIMPY; } }
+async function loadConfig(){
+  const r = await getJSON(`${GOOGLE_SHEETS_API}?action=obtenerConfiguracion`);
+  if(r && r.success){
+    $('#cfgNumeroWimpy').value = r.numero || '';
+    $('#cfgNombreW').value = (r.wimpy && r.wimpy.nombre) || '';
+    $('#cfgNIT').value = (r.wimpy && r.wimpy.nit) || '';
+    $('#cfgEmpresaNombre').value = (r.empresa && r.empresa.nombre) || '';
+    $('#cfgEmpresaNIT').value = (r.empresa && r.empresa.nit) || '';
+    $('#cfgCodigoEmpresa').value = (r.empresa && r.empresa.codigo) || '';
+    window.NUMERO_WIMPY = r.numero || NUMERO_WIMPY;
+  } else alert('Error cargando configuración');
+}
 
-// backups
-$('#btnBackupNow').addEventListener('click', async ()=>{ const res = await getJSON(`${GOOGLE_SHEETS_API}?action=backupDiario`); if(res && res.success) $('#backupLog').textContent = 'Backup creado: '+(res.driveUrl||res.driveId), alert('Backup creado'); else alert('Error'); });
+/* Backups */
+$('#btnBackupNow').addEventListener('click', async ()=>{ const res = await getJSON(`${GOOGLE_SHEETS_API}?action=backupDiario`); if(res && res.success) { $('#backupLog').textContent = 'Backup creado: '+(res.driveUrl||res.driveId); alert('Backup creado'); } else alert('Error'); });
 $('#btnCrearTrigger').addEventListener('click', async ()=>{ const res = await getJSON(`${GOOGLE_SHEETS_API}?action=crearTriggerBackup`); if(res && res.success) alert('Trigger creado'); else alert('Error'); });
 
-// stats
+/* Stats */
 function renderStats(){ $('#stat_total').textContent = historial.length; $('#stat_pend').textContent = historial.filter(h=>h.estado==='pendiente').length; $('#stat_ent').textContent = historial.filter(h=>h.estado==='entregado').length; getJSON(`${GOOGLE_SHEETS_API}?action=getTotalPuntos`).then(r=>{ $('#stat_pts').textContent = r && r.success ? (r.total||0) : 0; }); }
 
-// load initial
-(async function init(){ await loadProductos(); await loadClientes(); await loadHistorial(); await loadPromos(); renderProductsShort(); })();
-
-function renderProductsShort(){ /* helper small render used at init */ }
-
-// UTIL: balance de puntos (server)
-// getSaldoPuntos endpoint used earlier
-
+/* Init */
+(async function init(){
+  await loadProductos(); await loadClientes(); await loadHistorial(); await loadPromos();
+  // render short initial data if needed
+})();
 </script>
 </body>
 </html>
